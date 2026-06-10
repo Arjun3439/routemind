@@ -1,0 +1,78 @@
+{
+  "expo": {
+    "name": "RouteMind",
+    "slug": "routemind",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#020617"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.routemind.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RouteMind uses your location to find places along your route.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "RouteMind uses your location to send smart notifications when you approach must-visit places.",
+        "NSLocationAlwaysUsageDescription": "RouteMind uses your location in the background to notify you about nearby stops."
+      },
+      "config": {
+        "googleMapsApiKey": ""
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#020617"
+      },
+      "package": "com.routemind.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "RouteMind uses your location to find places along your route and send smart stop notifications."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2563EB",
+          "defaultChannel": "routemind"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "scheme": "routemind",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
