@@ -4,6 +4,13 @@
 
 RouteMind is a community-powered AI travel copilot that finds the best places to stop on any route, powered by Gemini AI, Google Maps, and community tips.
 
+### 🌟 New in RouteMind V3
+- **Community Intelligence**: Dedicated feeds for routes and places where travelers share live updates, stories, and hidden gems.
+- **Unified Search**: Search across places, routes, users, and travel lists seamlessly.
+- **Curated Travel Lists**: Create, share, and duplicate curated lists of your favorite places.
+- **Leaderboards & Reputation**: Gamified trust system where users earn reputation points and routes receive multifaceted community scores.
+- **AI Consensus**: Real-time AI summaries of what the community is saying about any place or route.
+
 ---
 
 ## 🚀 Quick Start (15 minutes)
@@ -75,16 +82,22 @@ Edit `.env` and fill in all keys:
 
 Run the SQL schema in Supabase SQL Editor:
 
+1. Run the base schema:
 ```
 supabase/schema.sql
 ```
+This creates the base `users`, `trips`, `places`, spatial indexes, and triggers.
 
-This creates:
-- `users`, `trips`, `places`, `trip_places`
-- `tips`, `upvotes`, `saved_places`, `visits`, `notifications`
-- PostGIS spatial indexes
-- RLS policies
-- Trigger functions
+2. Run the V3 migration:
+```
+supabase/v3_migration.sql
+```
+This adds `posts`, `route_communities`, `travel_lists`, `reputation`, and `follows`.
+
+3. (Optional) Run the seed file to populate dummy data:
+```
+supabase/seed-v3.sql
+```
 
 ---
 
@@ -99,28 +112,35 @@ routemind/
 │   │   └── sign-up.tsx          # Sign up + OTP verification
 │   ├── (tabs)/
 │   │   ├── index.tsx            # Home screen (route form)
-│   │   ├── explore.tsx          # Map tab
-│   │   ├── saved.tsx            # Saved places
-│   │   └── profile.tsx          # User profile
-│   ├── trip/
-│   │   └── results.tsx          # Route discovery + map
-│   └── place/
-│       └── [id].tsx             # Place detail + community tips
+│   │   ├── route.tsx            # Active route map
+│   │   ├── community.tsx        # Community feeds (For You / Following)
+│   │   ├── explore.tsx          # Trending lists and leaderboards
+│   │   └── profile.tsx          # User profile & stats
+│   ├── place/
+│   │   └── [id].tsx             # Place detail + community tips + AI summary
+│   ├── route-community/
+│   │   └── [id].tsx             # Route community + Reputation Radar
+│   ├── list/                    # Travel List screens (index, detail, create)
+│   ├── post/                    # Post creation and detail screens
+│   ├── search.tsx               # Unified Search
+│   └── leaderboard.tsx          # Community Leaderboard
 ├── src/
 │   ├── types/index.ts           # All TypeScript types
 │   ├── constants/index.ts       # Colors, spacing, weights
-│   ├── store/index.ts           # Zustand stores
+│   ├── store/                   # Zustand stores (auth, trip, community)
 │   ├── services/
 │   │   ├── gemini.service.ts    # Gemini AI integration
-│   │   ├── maps.service.ts      # Google Maps + Places
-│   │   ├── recommendation.service.ts  # Worth Stop Score
-│   │   ├── supabase.client.ts   # Supabase client
-│   │   ├── supabase.service.ts  # DB service layer
-│   │   └── notification.service.ts    # Push notifications + geofencing
+│   │   ├── search.service.ts    # Unified search
+│   │   ├── community.service.ts # Posts, upvotes, feeds
+│   │   └── ...                  # Maps, DB, reputation, lists, live-reports
 │   ├── components/
-│   │   └── place/PlaceCard.tsx  # Place card component
+│   │   ├── community/           # V3 UI (FeedSection, PostCard, ReputationRadar)
+│   │   └── LiquidGlassTabBar.tsx# Custom navigation bar
 │   └── utils/queryClient.ts     # React Query config
-└── supabase/schema.sql          # Full DB schema
+└── supabase/
+    ├── schema.sql               # Base DB schema
+    ├── v3_migration.sql         # V3 social schema migration
+    └── seed-v3.sql              # Dummy data
 ```
 
 ---
