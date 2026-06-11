@@ -13,8 +13,8 @@ import { COLORS } from "@/constants";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 70;
-const TAB_BAR_PADDING_BOTTOM = Platform.OS === "ios" ? 28 : 10;
+const TAB_BAR_HEIGHT = 88;
+const TAB_BAR_PADDING_BOTTOM = Platform.OS === "ios" ? 28 : 16;
 const CONTENT_HEIGHT = TAB_BAR_HEIGHT - TAB_BAR_PADDING_BOTTOM;
 const HORIZONTAL_MARGIN = 16;
 const TAB_BAR_WIDTH = SCREEN_WIDTH - HORIZONTAL_MARGIN * 2;
@@ -332,7 +332,7 @@ export default function LiquidGlassTabBar({
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: Platform.OS === "ios" ? 8 : 12,
+    bottom: Platform.OS === "ios" ? 8 : 16,
     left: 0,
     right: 0,
     alignItems: "center",
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   outerGlow: {
     position: "absolute",
-    bottom: Platform.OS === "ios" ? 10 : 16,
+    bottom: 10,
     left: HORIZONTAL_MARGIN + 20,
     right: HORIZONTAL_MARGIN + 20,
     height: 60,
@@ -372,6 +372,7 @@ const styles = StyleSheet.create({
       },
       android: {
         elevation: 16,
+        shadowColor: "#000",
       },
     }),
   },
@@ -428,12 +429,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingBottom: TAB_BAR_PADDING_BOTTOM,
+    paddingBottom: Platform.OS === "ios" ? TAB_BAR_PADDING_BOTTOM : 8,
   },
   tabItem: {
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 29,
+    paddingTop: Platform.OS === "ios" ? 29 : 14,
     gap: -1,
   },
   tabLabel: {
