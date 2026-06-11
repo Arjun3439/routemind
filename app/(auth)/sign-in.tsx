@@ -11,7 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { useSignIn, useOAuth } from "@clerk/clerk-expo";
+import { useSignIn, useOAuth, useAuth } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
@@ -25,6 +25,7 @@ WebBrowser.maybeCompleteAuthSession();
 export default function SignInScreen() {
   useWarmUpBrowser();
   const { signIn, setActive, isLoaded } = useSignIn();
+  const { isSignedIn } = useAuth();
   const router = useRouter();
 
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: "oauth_google" });
@@ -45,6 +46,10 @@ export default function SignInScreen() {
   };
 
   const handleSignIn = async () => {
+    if (isSignedIn) {
+      router.replace("/(tabs)");
+      return;
+    }
     if (!isLoaded || !validate()) return;
     setLoading(true);
     try {
@@ -66,6 +71,10 @@ export default function SignInScreen() {
   };
 
   const handleOAuth = async (strategy: "oauth_google" | "oauth_apple") => {
+    if (isSignedIn) {
+      router.replace("/(tabs)");
+      return;
+    }
     try {
       setLoading(true);
       const redirectUrl = Linking.createURL("/");
@@ -110,6 +119,10 @@ export default function SignInScreen() {
       );
     } catch (err: any) {
       console.error("OAuth error:", err);
+      if (err?.message?.includes("already signed in") || err?.toString()?.includes("already signed in")) {
+        router.replace("/(tabs)");
+        return;
+      }
       Alert.alert("Authentication Failed", err?.message || "Could not complete social sign in.");
     } finally {
       setLoading(false);

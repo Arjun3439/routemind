@@ -1,213 +1,200 @@
-import React, { useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-} from "react-native";
-import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import { COLORS, SPACING, FONT_SIZE, RADIUS, CATEGORY_ICONS } from "@/constants";
-import { useTripStore, useLocationStore } from "@/store";
-import { getScoreColor } from "@/services/recommendation.service";
+import React from "react";
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, FONT_SIZE, SPACING, RADIUS } from "@/constants";
 
-const { width, height } = Dimensions.get("window");
-
-export default function ExploreScreen() {
-  const mapRef = useRef<MapView>(null);
-  const { discoveredPlaces, currentRoute, selectedPlace, setSelectedPlace } = useTripStore();
-  const { currentLocation } = useLocationStore();
-
-  const hasRoute = !!currentRoute;
-
-  const initialRegion = currentLocation
-    ? {
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        latitudeDelta: 0.1,
-        longitudeDelta: 0.1,
-      }
-    : {
-        latitude: 20.5937,
-        longitude: 78.9629,
-        latitudeDelta: 15,
-        longitudeDelta: 15,
-      };
+export default function ExploreTab() {
+  const router = useRouter();
 
   return (
-    <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        style={StyleSheet.absoluteFill}
-        customMapStyle={darkMapStyle}
-        initialRegion={initialRegion}
-        showsUserLocation
-        showsMyLocationButton
-      >
-        {/* Route Polyline */}
-        {hasRoute && (
-          <Polyline
-            coordinates={
-              currentRoute.steps.flatMap((s) => [s.startLocation, s.endLocation])
-            }
-            strokeColor={COLORS.primary}
-            strokeWidth={4}
-          />
-        )}
-
-        {/* Place Markers */}
-        {discoveredPlaces.map((place) => (
-          <Marker
-            key={place.googlePlaceId}
-            coordinate={{ latitude: place.lat, longitude: place.lng }}
-            onPress={() => setSelectedPlace(place)}
-          >
-            <View
-              style={[
-                styles.marker,
-                { borderColor: getScoreColor(place.worthStopScore) },
-                selectedPlace?.googlePlaceId === place.googlePlaceId && styles.markerSelected,
-              ]}
-            >
-              <Text style={styles.markerEmoji}>{CATEGORY_ICONS[place.category] || "📍"}</Text>
-              <Text style={[styles.markerScore, { color: getScoreColor(place.worthStopScore) }]}>
-                {place.worthStopScore}
-              </Text>
-            </View>
-          </Marker>
-        ))}
-      </MapView>
-
-      {/* Empty state */}
-      {!hasRoute && discoveredPlaces.length === 0 && (
-        <View style={styles.emptyOverlay}>
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyEmoji}>🗺</Text>
-            <Text style={styles.emptyTitle}>No active route</Text>
-            <Text style={styles.emptyText}>
-              Start a discovery from the Home tab to see places on the map
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* Selected place mini card */}
-      {selectedPlace && (
-        <View style={styles.selectedCard}>
-          <Text style={styles.selectedEmoji}>
-            {CATEGORY_ICONS[selectedPlace.category] || "📍"}
-          </Text>
-          <View style={styles.selectedInfo}>
-            <Text style={styles.selectedName} numberOfLines={1}>
-              {selectedPlace.name}
-            </Text>
-            <Text style={styles.selectedMeta}>
-              ⭐ {selectedPlace.rating.toFixed(1)} · 🚗 {selectedPlace.detourMinutes} min
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.selectedScore,
-              { backgroundColor: `${getScoreColor(selectedPlace.worthStopScore)}22` },
-            ]}
-          >
-            <Text
-              style={[
-                styles.selectedScoreNum,
-                { color: getScoreColor(selectedPlace.worthStopScore) },
-              ]}
-            >
-              {selectedPlace.worthStopScore}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => setSelectedPlace(null)}>
-            <Text style={styles.dismissText}>✕</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Explore</Text>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/search")}>
+            <Ionicons name="search-outline" size={24} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
-      )}
-    </View>
+
+        {/* Top Categories */}
+        <View style={styles.section}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
+            {["Hidden Gems", "Scenic Routes", "Foodie Favorites", "Camping", "Off-Road"].map(cat => (
+              <TouchableOpacity key={cat} style={styles.categoryBadge}>
+                <Text style={styles.categoryText}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Leaderboards Entry */}
+        <TouchableOpacity style={styles.leaderboardCard} onPress={() => router.push("/leaderboard")}>
+          <View style={styles.leaderboardLeft}>
+            <Text style={styles.leaderboardEmoji}>🏆</Text>
+            <View>
+              <Text style={styles.leaderboardTitle}>Community Leaderboards</Text>
+              <Text style={styles.leaderboardSub}>See top contributors and rank up!</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color={COLORS.textSecondary} />
+        </TouchableOpacity>
+
+        {/* Trending Travel Lists */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Trending Lists</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.placeholderCard}>
+                <Ionicons name="list" size={32} color={COLORS.primary} />
+                <Text style={styles.placeholderText}>List {i}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Top Rated Routes */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Top Rated Routes</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={[styles.placeholderCard, { width: 200, height: 120 }]}>
+                <Ionicons name="map" size={32} color={COLORS.success} />
+                <Text style={styles.placeholderText}>Route {i}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  marker: {
-    backgroundColor: "rgba(9,15,35,0.9)",
-    borderRadius: RADIUS.md,
-    borderWidth: 2,
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 4,
-    alignItems: "center",
-    minWidth: 46,
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
-  markerSelected: { borderWidth: 2.5 },
-  markerEmoji: { fontSize: 16 },
-  markerScore: { fontSize: FONT_SIZE.xs, fontWeight: "800" },
-
-  emptyOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(2,6,23,0.5)",
+  scrollContent: {
+    paddingBottom: 100,
   },
-  emptyCard: {
-    backgroundColor: "rgba(15,23,42,0.95)",
-    borderRadius: RADIUS["2xl"],
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    padding: SPACING["2xl"],
-    alignItems: "center",
-    width: width * 0.75,
-  },
-  emptyEmoji: { fontSize: 48, marginBottom: SPACING.base },
-  emptyTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  emptyText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-
-  selectedCard: {
-    position: "absolute",
-    bottom: 90,
-    left: SPACING.base,
-    right: SPACING.base,
-    backgroundColor: "rgba(15,23,42,0.97)",
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: SPACING.base,
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.background,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+  },
+  iconButton: {
+    padding: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  section: {
+    marginBottom: SPACING.xl,
+  },
+  categoriesRow: {
+    paddingHorizontal: SPACING.md,
     gap: SPACING.sm,
   },
-  selectedEmoji: { fontSize: 28 },
-  selectedInfo: { flex: 1 },
-  selectedName: { fontSize: FONT_SIZE.base, fontWeight: "700", color: COLORS.textPrimary },
-  selectedMeta: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
-  selectedScore: {
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
+  categoryBadge: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  selectedScoreNum: { fontSize: FONT_SIZE.lg, fontWeight: "900" },
-  dismissText: { fontSize: 18, color: COLORS.textMuted, padding: SPACING.xs },
+  categoryText: {
+    color: COLORS.textPrimary,
+    fontWeight: "600",
+    fontSize: FONT_SIZE.sm,
+  },
+  leaderboardCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.xl,
+    padding: SPACING.md,
+    backgroundColor: `${COLORS.primary}15`,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: `${COLORS.primary}30`,
+  },
+  leaderboardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  leaderboardEmoji: {
+    fontSize: 32,
+  },
+  leaderboardTitle: {
+    fontSize: FONT_SIZE.base,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  leaderboardSub: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  seeAllText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
+  horizontalList: {
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.md,
+  },
+  placeholderCard: {
+    width: 140,
+    height: 140,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  placeholderText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: "600",
+  },
 });
-
-const darkMapStyle = [
-  { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0f172a" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1e293b" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#334155" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0c1a2e" }] },
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-];

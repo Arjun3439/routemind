@@ -98,6 +98,8 @@ export const useLocationStore = create<LocationState>()(
   )
 );
 
+export * from "./community";
+
 // ============================================================
 // UI Store
 // ============================================================

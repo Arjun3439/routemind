@@ -137,7 +137,85 @@ function UserIcon({ color, size, filled }: { color: string; size: number; filled
   );
 }
 
-const ICONS = [HomeIcon, MapIcon, HeartIcon, UserIcon];
+function UsersIcon({ color, size, filled }: { color: string; size: number; filled: boolean }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9 11a4 4 0 100-8 4 4 0 000 8z"
+        stroke={color}
+        fill={filled ? color : "none"}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={filled ? 0.25 : 1}
+      />
+      {filled && (
+        <Path
+          d="M9 11a4 4 0 100-8 4 4 0 000 8z"
+          stroke={color}
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+      <Path
+        d="M23 21v-2a4 4 0 00-3-3.87"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M16 3.13a4 4 0 010 7.75"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CompassIcon({ color, size, filled }: { color: string; size: number; filled: boolean }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
+        stroke={color}
+        fill={filled ? color : "none"}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={filled ? 0.25 : 1}
+      />
+      {filled && (
+        <Path
+          d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
+          stroke={color}
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+      <Path
+        d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+const ICONS = [HomeIcon, MapIcon, UsersIcon, CompassIcon, UserIcon];
 
 // ─── Tab Item ────────────────────────────────────────────────
 interface TabItemProps {

@@ -19,15 +19,21 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="route"
         options={{
-          title: "Map",
+          title: "Route",
         }}
       />
       <Tabs.Screen
-        name="saved"
+        name="community"
         options={{
-          title: "Saved",
+          title: "Community",
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: "Explore",
         }}
       />
       <Tabs.Screen

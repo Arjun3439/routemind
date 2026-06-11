@@ -37,6 +37,7 @@ export default function PlaceDetailScreen() {
   const [tipText, setTipText] = useState("");
   const [isSaved, setIsSaved] = useState(place?.isSaved || false);
   const [isVisited, setIsVisited] = useState(place?.isVisited || false);
+  const [activeTab, setActiveTab] = useState<"feed"|"live"|"ai"|"gems"|"top">("feed");
 
   // Fetch tips from Supabase
   const { data: tips = [], isLoading: tipsLoading } = useQuery({
@@ -214,60 +215,115 @@ export default function PlaceDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Community Tips */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>💬 Community Tips</Text>
-            <Text style={styles.sectionCount}>{tips.length} tips</Text>
-          </View>
-
-          {/* Add Tip */}
-          <View style={styles.addTipCard}>
-            <TextInput
-              style={styles.tipInput}
-              placeholder="Share a tip about this place..."
-              placeholderTextColor={COLORS.textMuted}
-              value={tipText}
-              onChangeText={setTipText}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-            <TouchableOpacity
-              style={[styles.addTipBtn, createTipMutation.isPending && styles.btnDisabled]}
-              onPress={handleAddTip}
-              disabled={createTipMutation.isPending}
-            >
-              <LinearGradient
-                colors={[COLORS.primary, COLORS.secondary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.addTipGradient}
+          {/* V3 Sub-Tabs */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subTabsContainer}>
+            {(["feed", "live", "ai", "gems", "top"] as const).map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.subTab, activeTab === tab && styles.subTabActive]}
+                onPress={() => setActiveTab(tab)}
               >
-                {createTipMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.addTipBtnText}>Share Tip ✨</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+                <Text style={[styles.subTabText, activeTab === tab && styles.subTabTextActive]}>
+                  {tab === "feed" && "Community Feed"}
+                  {tab === "live" && "Live Updates"}
+                  {tab === "ai" && "AI Summary"}
+                  {tab === "gems" && "Nearby Gems"}
+                  {tab === "top" && "Top Contributors"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-          {/* Tips List */}
-          {tipsLoading ? (
-            <ActivityIndicator color={COLORS.primary} style={{ marginVertical: SPACING.xl }} />
-          ) : tips.length === 0 ? (
-            <View style={styles.noTips}>
-              <Text style={styles.noTipsEmoji}>💡</Text>
-              <Text style={styles.noTipsText}>Be the first to share a tip!</Text>
+          {/* Tab Content */}
+          {activeTab === "feed" && (
+            <>
+              {/* Community Tips */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>💬 Community Feed</Text>
+                <Text style={styles.sectionCount}>{tips.length} tips</Text>
+              </View>
+
+              {/* Add Tip */}
+              <View style={styles.addTipCard}>
+                <TextInput
+                  style={styles.tipInput}
+                  placeholder="Share a tip or post about this place..."
+                  placeholderTextColor={COLORS.textMuted}
+                  value={tipText}
+                  onChangeText={setTipText}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+                <TouchableOpacity
+                  style={[styles.addTipBtn, createTipMutation.isPending && styles.btnDisabled]}
+                  onPress={handleAddTip}
+                  disabled={createTipMutation.isPending}
+                >
+                  <LinearGradient
+                    colors={[COLORS.primary, COLORS.secondary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.addTipGradient}
+                  >
+                    {createTipMutation.isPending ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.addTipBtnText}>Post to Feed ✨</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+
+              {/* Tips List */}
+              {tipsLoading ? (
+                <ActivityIndicator color={COLORS.primary} style={{ marginVertical: SPACING.xl }} />
+              ) : tips.length === 0 ? (
+                <View style={styles.noTips}>
+                  <Text style={styles.noTipsEmoji}>💡</Text>
+                  <Text style={styles.noTipsText}>Be the first to share something!</Text>
+                </View>
+              ) : (
+                tips.map((tip) => (
+                  <TipItem
+                    key={tip.id}
+                    tip={tip}
+                    onUpvote={() => upvoteMutation.mutate({ tipId: tip.id, hasUpvoted: tip.hasUpvoted || false })}
+                  />
+                ))
+              )}
+            </>
+          )}
+
+          {activeTab === "live" && (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderEmoji}>📡</Text>
+              <Text style={styles.placeholderText}>Live Updates</Text>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/post/create?type=place_post&placeId=${id}`)}>
+                <Text style={styles.primaryBtnText}>Broadcast Update</Text>
+              </TouchableOpacity>
             </View>
-          ) : (
-            tips.map((tip) => (
-              <TipItem
-                key={tip.id}
-                tip={tip}
-                onUpvote={() => upvoteMutation.mutate({ tipId: tip.id, hasUpvoted: tip.hasUpvoted || false })}
-              />
-            ))
+          )}
+
+          {activeTab === "ai" && (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderEmoji}>✨</Text>
+              <Text style={styles.placeholderText}>AI Summary is generating...</Text>
+            </View>
+          )}
+
+          {activeTab === "gems" && (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderEmoji}>💎</Text>
+              <Text style={styles.placeholderText}>No hidden gems nearby yet.</Text>
+            </View>
+          )}
+
+          {activeTab === "top" && (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderEmoji}>🏆</Text>
+              <Text style={styles.placeholderText}>Top Contributors</Text>
+            </View>
           )}
 
           <View style={{ height: 80 }} />
@@ -503,4 +559,59 @@ const styles = StyleSheet.create({
   upvoteEmoji: { fontSize: 18 },
   upvoteCount: { fontSize: FONT_SIZE.sm, fontWeight: "700", color: COLORS.textSecondary },
   tipContent: { fontSize: FONT_SIZE.base, color: COLORS.textSecondary, lineHeight: 22 },
+  
+  // Sub-Tabs
+  subTabsContainer: {
+    marginBottom: SPACING.lg,
+    flexDirection: "row",
+  },
+  subTab: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginRight: SPACING.sm,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  subTabActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  subTabText: {
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+    fontSize: FONT_SIZE.sm,
+  },
+  subTabTextActive: {
+    color: "#fff",
+  },
+  placeholderContainer: {
+    alignItems: "center",
+    paddingVertical: SPACING["2xl"],
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: "dashed",
+  },
+  placeholderEmoji: {
+    fontSize: 32,
+    marginBottom: SPACING.sm,
+  },
+  placeholderText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.base,
+    marginBottom: SPACING.md,
+  },
+  primaryBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+  },
+  primaryBtnText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
 });

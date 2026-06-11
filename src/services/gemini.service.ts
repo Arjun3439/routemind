@@ -1,5 +1,6 @@
 import axios from "axios";
-import type { AIFilters, PlaceCategory } from "@/types";
+import type { AIFilters, PlaceCategory, PlaceAISummary, RouteAISummary, TravelStorySummary } from "@/types";
+import { supabase } from "./supabase.client";
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY!;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -157,4 +158,163 @@ function getDefaultFilters(prompt: string): AIFilters {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+// ============================================================
+// V3 — AI Summaries
+// ============================================================
+
+export async function generatePlaceAISummary(placeId: string): Promise<PlaceAISummary | null> {
+  try {
+    // Fetch place details, tips, and posts
+    const { data: place } = await supabase.from("places").select("name, category").eq("id", placeId).single();
+    if (!place) return null;
+
+    const { data: tips } = await supabase.from("tips").select("content, upvotes").eq("place_id", placeId).order("upvotes", { ascending: false }).limit(10);
+    const { data: posts } = await supabase.from("posts").select("title, body").eq("place_id", placeId).limit(5);
+
+    const contextTexts = [
+      ...(tips || []).map((t: any) => `Tip: ${t.content}`),
+      ...(posts || []).map((p: any) => `Post: ${p.title} - ${p.body}`),
+    ].join("\\n");
+
+    const prompt = `
+You are a travel assistant. Summarize this place based on community tips and posts.
+Place: ${place.name} (${place.category})
+Context:
+${contextTexts || "No community context available. Provide a generic engaging summary."}
+
+Return ONLY a valid JSON object with exactly these fields (keep strings brief):
+{
+  "famousFor": "what it is famous for",
+  "bestTimeToVisit": "best time to visit",
+  "parking": "parking situation",
+  "crowdPattern": "when it gets crowded",
+  "amenities": "key amenities"
+}
+`;
+
+    const response = await axios.post(
+      GEMINI_URL,
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 500 },
+      },
+      { timeout: 15000, headers: { "Content-Type": "application/json" } }
+    );
+
+    const rawText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) return null;
+
+    const cleaned = rawText.replace(/\`\`\`json\\n?/g, "").replace(/\`\`\`\\n?/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    const summary: PlaceAISummary = {
+      famousFor: parsed.famousFor || "Its unique experience",
+      bestTimeToVisit: parsed.bestTimeToVisit || "Anytime",
+      parking: parsed.parking || "Unknown",
+      crowdPattern: parsed.crowdPattern || "Varies",
+      amenities: parsed.amenities || "Standard",
+      generatedAt: new Date().toISOString(),
+    };
+
+    // Cache in Supabase
+    await supabase.from("places").update({ ai_summary: summary }).eq("id", placeId);
+
+    return summary;
+  } catch (error) {
+    console.error("Place AI Summary Error:", error);
+    return null;
+  }
+}
+
+export async function generateRouteAISummary(routeCommunityId: string): Promise<RouteAISummary | null> {
+  try {
+    const { data: route } = await supabase.from("route_communities").select("origin_label, destination_label").eq("id", routeCommunityId).single();
+    if (!route) return null;
+
+    const { data: posts } = await supabase.from("posts").select("title, body, places(name)").eq("route_community_id", routeCommunityId).order("upvote_count", { ascending: false }).limit(15);
+
+    const contextTexts = (posts || []).map((p: any) => `Place: ${p.places?.name || 'Route'} | Content: ${p.title} - ${p.body}`).join("\\n");
+
+    const prompt = `
+You are a travel assistant analyzing the route from ${route.origin_label} to ${route.destination_label}.
+Based on these community posts, identify 3 to 5 key highlights or tips for travelers.
+
+Context:
+${contextTexts || "No specific community context yet. Provide general advice for this route."}
+
+Return ONLY a valid JSON object with exactly this structure:
+{
+  "highlights": [
+    {
+      "category": "Food | Road Condition | Scenic | Safety | General",
+      "tip": "Short 1-sentence tip",
+      "placeName": "Name of specific place, or omit if general"
+    }
+  ]
+}
+`;
+
+    const response = await axios.post(
+      GEMINI_URL,
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 800 },
+      },
+      { timeout: 15000, headers: { "Content-Type": "application/json" } }
+    );
+
+    const rawText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) return null;
+
+    const cleaned = rawText.replace(/\`\`\`json\\n?/g, "").replace(/\`\`\`\\n?/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    const summary: RouteAISummary = {
+      highlights: parsed.highlights || [],
+      generatedAt: new Date().toISOString(),
+    };
+
+    // Cache in Supabase
+    await supabase.from("route_communities").update({ ai_summary: summary }).eq("id", routeCommunityId);
+
+    return summary;
+  } catch (error) {
+    console.error("Route AI Summary Error:", error);
+    return null;
+  }
+}
+
+export async function generateTravelStory(tripId: string): Promise<TravelStorySummary | null> {
+  try {
+    const { data: trip } = await supabase.from("trips").select("source, destination").eq("id", tripId).single();
+    if (!trip) return null;
+
+    const { data: tripPlaces } = await supabase.from("trip_places").select("places(id, name, category, is_hidden_gem)").eq("trip_id", tripId);
+    
+    // Fallbacks if tables don't have enough data
+    const placesVisitedCount = tripPlaces ? tripPlaces.length : 0;
+    const hiddenGemsDiscovered = (tripPlaces || []).filter((tp: any) => tp.places?.is_hidden_gem).length;
+    
+    const categoriesSet = new Set<string>();
+    (tripPlaces || []).forEach((tp: any) => {
+      if (tp.places?.category) categoriesSet.add(tp.places.category);
+    });
+
+    // Pick a random place as "most loved" if none has specific feedback, or first one
+    const mostLoved = tripPlaces && tripPlaces.length > 0 ? tripPlaces[0].places : null;
+
+    return {
+      distanceKm: 0, // Would need actual route dist, defaulting to 0
+      placesVisitedCount,
+      hiddenGemsDiscovered,
+      categoriesTried: Array.from(categoriesSet),
+      mostLovedStopPlaceId: mostLoved?.id,
+      mostLovedStopName: mostLoved?.name,
+    };
+  } catch (error) {
+    console.error("Travel Story Summary Error:", error);
+    return null;
+  }
 }

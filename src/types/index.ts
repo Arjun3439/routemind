@@ -179,3 +179,251 @@ export interface RouteDiscoveryResult {
   filters: AIFilters;
   totalFound: number;
 }
+
+// ============================================================
+// V3 — Community Intelligence Types
+// ============================================================
+
+export type PostType = 'place_post' | 'route_post' | 'hidden_gem_nomination' | 'travel_story';
+export type ReputationLevel = 'traveler' | 'explorer' | 'guide' | 'expert' | 'legend';
+export type VoteTargetType = 'post' | 'comment';
+export type FollowTargetType = 'user' | 'place' | 'route_community' | 'list';
+export type SaveTargetType = 'place' | 'post' | 'route_community' | 'list';
+export type ReportTargetType = 'post' | 'comment' | 'user';
+export type ReportStatus = 'pending' | 'reviewed' | 'dismissed';
+export type GemNominationStatus = 'pending' | 'approved' | 'rejected';
+
+export type LiveReportType =
+  | 'crowded' | 'less_crowded' | 'closed' | 'open'
+  | 'road_block' | 'accident' | 'fresh_batch' | 'parking_available'
+  | 'long_queue' | 'heavy_traffic' | 'police_checkpoint' | 'weather_alert';
+
+export interface Post {
+  id: string;
+  authorId: string;
+  type: PostType;
+  placeId?: string;
+  tripId?: string;
+  routeCommunityId?: string;
+  title: string;
+  body: string;
+  mediaUrls: string[];
+  upvoteCount: number;
+  downvoteCount: number;
+  commentCount: number;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Joined fields
+  authorName?: string;
+  authorAvatar?: string;
+  authorLevel?: ReputationLevel;
+  placeName?: string;
+  routeName?: string;
+  userVote?: 1 | -1 | null;
+  isSaved?: boolean;
+}
+
+export interface Comment {
+  id: string;
+  postId: string;
+  authorId: string;
+  parentCommentId?: string;
+  body: string;
+  upvoteCount: number;
+  downvoteCount: number;
+  isDeleted: boolean;
+  createdAt: string;
+  // Joined fields
+  authorName?: string;
+  authorAvatar?: string;
+  authorLevel?: ReputationLevel;
+  userVote?: 1 | -1 | null;
+  replies?: Comment[];
+  depth?: number;
+}
+
+export interface Vote {
+  id: string;
+  userId: string;
+  targetType: VoteTargetType;
+  targetId: string;
+  value: 1 | -1;
+  createdAt: string;
+}
+
+export interface LiveReport {
+  id: string;
+  reporterId: string;
+  placeId?: string;
+  routeCommunityId?: string;
+  reportType: LiveReportType;
+  expiresAt: string;
+  upvoteCount: number;
+  createdAt: string;
+  // Joined fields
+  reporterName?: string;
+  reporterAvatar?: string;
+  placeName?: string;
+}
+
+export interface Follow {
+  id: string;
+  followerId: string;
+  followedType: FollowTargetType;
+  followedId: string;
+  createdAt: string;
+}
+
+export interface TravelList {
+  id: string;
+  ownerId: string;
+  title: string;
+  description?: string;
+  coverImageUrl?: string;
+  isPublic: boolean;
+  likeCount: number;
+  saveCount: number;
+  followCount: number;
+  duplicatedFromListId?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Joined fields
+  ownerName?: string;
+  ownerAvatar?: string;
+  itemCount?: number;
+  isFollowed?: boolean;
+}
+
+export interface TravelListItem {
+  id: string;
+  listId: string;
+  placeId: string;
+  note?: string;
+  position: number;
+  createdAt: string;
+  // Joined fields
+  place?: Place;
+}
+
+export interface UserReputation {
+  userId: string;
+  level: ReputationLevel;
+  xpPoints: number;
+  badges: string[];
+  postsCount: number;
+  hiddenGemsFound: number;
+  totalUpvotesReceived: number;
+  updatedAt: string;
+  // Joined fields
+  userName?: string;
+  userAvatar?: string;
+}
+
+export interface PlaceTrustScore {
+  placeId: string;
+  aiScore: number;
+  communityScore: number;
+  freshnessScore: number;
+  trustScore: number;
+  finalScore: number;
+  computedAt: string;
+}
+
+export interface RouteCommunity {
+  id: string;
+  slug: string;
+  originLabel: string;
+  destinationLabel: string;
+  description?: string;
+  coverImageUrl?: string;
+  memberCount: number;
+  postCount: number;
+  aiSummary?: Record<string, unknown>;
+  createdAt: string;
+  // Joined fields
+  isFollowed?: boolean;
+  reputationScores?: RouteReputationScores;
+}
+
+export interface RouteReputationScores {
+  routeCommunityId: string;
+  foodScore: number;
+  coffeeScore: number;
+  roadQualityScore: number;
+  photographyScore: number;
+  safetyScore: number;
+  nightDrivingScore: number;
+  fuelAvailabilityScore: number;
+  overallScore: number;
+  computedAt: string;
+}
+
+export interface HiddenGemNomination {
+  id: string;
+  placeId: string;
+  nominatedBy: string;
+  postId?: string;
+  upvoteCount: number;
+  downvoteCount: number;
+  status: GemNominationStatus;
+  approvedAt?: string;
+  createdAt: string;
+  // Joined fields
+  placeName?: string;
+  nominatorName?: string;
+}
+
+export interface TravelStory {
+  id: string;
+  userId: string;
+  tripId?: string;
+  title: string;
+  summaryJson: TravelStorySummary;
+  isPublished: boolean;
+  postId?: string;
+  createdAt: string;
+  // Joined fields
+  userName?: string;
+  userAvatar?: string;
+}
+
+export interface TravelStorySummary {
+  distanceKm: number;
+  placesVisitedCount: number;
+  hiddenGemsDiscovered: number;
+  categoriesTried: string[];
+  mostLovedStopPlaceId?: string;
+  mostLovedStopName?: string;
+}
+
+export interface PlaceAISummary {
+  famousFor: string;
+  bestTimeToVisit: string;
+  parking: string;
+  crowdPattern: string;
+  amenities: string;
+  generatedAt: string;
+}
+
+export interface RouteAISummary {
+  highlights: Array<{
+    category: string;
+    tip: string;
+    placeName?: string;
+  }>;
+  generatedAt: string;
+}
+
+// Feed scoring types
+export interface FeedScoreWeights {
+  engagement: number;
+  freshness: number;
+  authorReputation: number;
+  trustScore: number;
+  routeRelevance: number;
+}
+
+export interface ScoredPost extends Post {
+  feedScore: number;
+}

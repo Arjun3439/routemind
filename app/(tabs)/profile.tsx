@@ -79,8 +79,8 @@ export default function ProfileScreen() {
           <View style={styles.statsRow}>
             {[
               { label: "Trips", value: trips.length },
-              { label: "Places Saved", value: "—" },
-              { label: "Tips Shared", value: "—" },
+              { label: "Reputation", value: "1.2k" },
+              { label: "Following", value: "42" },
             ].map((stat) => (
               <View key={stat.label} style={styles.statItem}>
                 <Text style={styles.statValue}>{stat.value}</Text>
@@ -88,6 +88,26 @@ export default function ProfileScreen() {
               </View>
             ))}
           </View>
+        </View>
+
+        {/* Travel Lists */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>My Travel Lists</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/list/create")}>
+            <Text style={styles.menuEmoji}>➕</Text>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuLabel}>Create New List</Text>
+              <Text style={styles.menuSub}>Curate places into a shareable list</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/list")}>
+            <Text style={styles.menuEmoji}>📋</Text>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuLabel}>View All Lists</Text>
+              <Text style={styles.menuSub}>Your created and saved lists</Text>
+            </View>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Recent Trips */}
