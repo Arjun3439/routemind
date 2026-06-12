@@ -184,7 +184,7 @@ export interface RouteDiscoveryResult {
 // V3 — Community Intelligence Types
 // ============================================================
 
-export type PostType = 'place_post' | 'route_post' | 'hidden_gem_nomination' | 'travel_story';
+export type PostType = 'place_post' | 'route_post' | 'hidden_gem_nomination' | 'travel_story' | 'google_review';
 export type ReputationLevel = 'traveler' | 'explorer' | 'guide' | 'expert' | 'legend';
 export type VoteTargetType = 'post' | 'comment';
 export type FollowTargetType = 'user' | 'place' | 'route_community' | 'list';
@@ -222,6 +222,7 @@ export interface Post {
   routeName?: string;
   userVote?: 1 | -1 | null;
   isSaved?: boolean;
+  rating?: number; // Star rating (1-5) for Google review posts
 }
 
 export interface Comment {

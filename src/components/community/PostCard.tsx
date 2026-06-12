@@ -51,6 +51,21 @@ export default function PostCard({ post, onVoteChange, compact = false }: PostCa
     return `${Math.floor(hours / 24)}d ago`;
   };
 
+  const renderStars = (rating: number) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <Ionicons
+          key={i}
+          name={i <= rating ? "star" : i - 0.5 <= rating ? "star-half" : "star-outline"}
+          size={14}
+          color={COLORS.starColor}
+        />
+      );
+    }
+    return <View style={styles.starsRow}>{stars}</View>;
+  };
+
   const renderBadge = () => {
     switch (post.type) {
       case "hidden_gem_nomination":
@@ -59,6 +74,8 @@ export default function PostCard({ post, onVoteChange, compact = false }: PostCa
         return <View style={[styles.badge, { backgroundColor: COLORS.primary }]}><Text style={styles.badgeText}>📖 Story</Text></View>;
       case "route_post":
         return <View style={[styles.badge, { backgroundColor: COLORS.success }]}><Text style={styles.badgeText}>🛣️ Route Update</Text></View>;
+      case "google_review":
+        return <View style={[styles.badge, { backgroundColor: COLORS.accent }]}><Text style={styles.badgeText}>⭐ Google Review</Text></View>;
       default:
         return null;
     }
@@ -88,6 +105,13 @@ export default function PostCard({ post, onVoteChange, compact = false }: PostCa
       </View>
 
       <Text style={styles.title}>{post.title}</Text>
+
+      {post.type === "google_review" && post.rating != null && (
+        <View style={styles.ratingRow}>
+          {renderStars(post.rating)}
+          <Text style={styles.ratingText}>{post.rating.toFixed(1)}</Text>
+        </View>
+      )}
       
       {!compact && post.body && (
         <Text style={styles.body} numberOfLines={3}>
@@ -239,5 +263,21 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.sm,
     fontWeight: "600",
+  },
+  starsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  ratingText: {
+    color: COLORS.starColor,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: "700",
   },
 });

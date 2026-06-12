@@ -1,19 +1,24 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS, FONT_SIZE, SPACING, RADIUS } from "@/constants";
+import * as Location from "expo-location";
+import { COLORS, FONT_SIZE, SPACING } from "@/constants";
 import FeedSection from "@/components/community/FeedSection";
 import { useCommunityStore, useAuthStore } from "@/store";
+import { useLocationStore } from "@/store";
 import { getRankedFeed, getFollowingFeed } from "@/services/community-ranking.service";
-import type { Post } from "@/types";
+import { fetchGoogleReviewPosts, clearGoogleReviewCache } from "@/services/google-reviews.service";
+import type { Post, ScoredPost } from "@/types";
 
 type FeedType = "foryou" | "following";
 
 export default function CommunityTab() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  
+  const { currentLocation, setCurrentLocation, setLocationPermission } = useLocationStore();
+
   const { 
     forYouFeed, 
     followingFeed, 
@@ -25,13 +30,51 @@ export default function CommunityTab() {
   const [activeFeed, setActiveFeed] = useState<FeedType>("foryou");
   const [loading, setLoading] = useState(true);
 
-  const fetchFeed = useCallback(async (type: FeedType) => {
+  // Request location on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        setLocationPermission(status === "granted" ? "granted" : "denied");
+
+        if (status === "granted" && !currentLocation) {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setCurrentLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+        }
+      } catch (e) {
+        console.warn("Location request failed:", e);
+      }
+    })();
+  }, []);
+
+  const fetchFeed = useCallback(async (type: FeedType, forceRefresh = false) => {
     setLoading(true);
     try {
       if (type === "foryou") {
-        // Mock active route for now, could be pulled from route store
-        const posts = await getRankedFeed(user?.id || "anonymous", []);
-        setForYouFeed(posts);
+        // Fetch both Supabase posts and Google review posts in parallel
+        const [supabasePosts, googlePosts] = await Promise.allSettled([
+          getRankedFeed(user?.id || "anonymous", []).catch(() => [] as ScoredPost[]),
+          fetchGoogleReviewPosts(
+            currentLocation?.latitude,
+            currentLocation?.longitude
+          ),
+        ]);
+
+        const dbPosts: ScoredPost[] = supabasePosts.status === "fulfilled" ? supabasePosts.value : [];
+        const reviewPosts: ScoredPost[] = (googlePosts.status === "fulfilled" ? googlePosts.value : [])
+          .map((p) => ({ ...p, feedScore: 0 }));
+
+        // Merge and sort by creation date (most recent first)
+        const merged: ScoredPost[] = [...dbPosts, ...reviewPosts].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        setForYouFeed(merged);
       } else if (type === "following") {
         if (!user) {
           setFollowingFeed([]);
@@ -45,14 +88,23 @@ export default function CommunityTab() {
     } finally {
       setLoading(false);
     }
-  }, [user, setForYouFeed, setFollowingFeed]);
+  }, [user, currentLocation, setForYouFeed, setFollowingFeed]);
 
+  // Re-fetch when location becomes available or feed tab changes
   useEffect(() => {
     fetchFeed(activeFeed);
   }, [activeFeed, fetchFeed]);
 
+  const handleRefresh = useCallback(() => {
+    if (activeFeed === "foryou") {
+      clearGoogleReviewCache();
+    }
+    fetchFeed(activeFeed, true);
+  }, [activeFeed, fetchFeed]);
+
   const handleVoteChange = (postId: string, userVote: 1 | -1 | null, netChange: number) => {
-    // Optimistic update logic
+    if (postId.startsWith("google-review-")) return;
+
     const updateTarget = (posts: Post[]) => {
       const post = posts.find(p => p.id === postId);
       if (!post) return null;
@@ -76,7 +128,7 @@ export default function CommunityTab() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Community</Text>
@@ -113,7 +165,7 @@ export default function CommunityTab() {
       <FeedSection
         posts={activeFeed === "foryou" ? forYouFeed : followingFeed}
         loading={loading}
-        onRefresh={() => fetchFeed(activeFeed)}
+        onRefresh={handleRefresh}
         onVoteChange={handleVoteChange}
         emptyMessage={
           activeFeed === "foryou" 
