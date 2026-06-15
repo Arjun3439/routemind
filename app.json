@@ -20,7 +20,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RouteMind uses your location to find places along your route.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "RouteMind uses your location to send smart notifications when you approach must-visit places.",
-        "NSLocationAlwaysUsageDescription": "RouteMind uses your location in the background to notify you about nearby stops."
+        "NSLocationAlwaysUsageDescription": "RouteMind uses your location in the background to notify you about nearby stops.",
+        "LSApplicationQueriesSchemes": ["comgooglemaps", "googlemaps", "maps", "geo"]
       },
       "config": {
         "googleMapsApiKey": ""

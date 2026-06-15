@@ -21,6 +21,8 @@ import { useTripStore } from "@/store";
 import { getScoreLabel, getScoreColor, calculateWorthStopScore } from "@/services/recommendation.service";
 import { scheduleApproachNotification } from "@/services/notification.service";
 import type { Tip } from "@/types";
+import { openMapsNavigation } from "@/utils/openMapsNavigation";
+import ReviewSummarySection from "@/components/place/ReviewSummarySection";
 
 const { width } = Dimensions.get("window");
 
@@ -213,7 +215,23 @@ export default function PlaceDetailScreen() {
               <Text style={styles.actionBtnEmoji}>🔔</Text>
               <Text style={styles.actionBtnText}>Notify Me</Text>
             </TouchableOpacity>
+
+            {/* Navigate button */}
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.actionBtnNavigate]}
+              onPress={() =>
+                openMapsNavigation(place.lat, place.lng, place.name).catch(() =>
+                  Alert.alert("Error", "Could not open Google Maps.")
+                )
+              }
+            >
+              <Text style={styles.actionBtnEmoji}>🧭</Text>
+              <Text style={styles.actionBtnText}>Navigate</Text>
+            </TouchableOpacity>
           </View>
+
+          {/* Gemini Review Summary — all bullets on detail screen */}
+          <ReviewSummarySection placeId={id!} maxBullets={5} />
 
           {/* V3 Sub-Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subTabsContainer}>
@@ -478,9 +496,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: SPACING.sm,
     marginBottom: SPACING.xl,
+    flexWrap: "wrap",
   },
   actionBtn: {
     flex: 1,
+    minWidth: 70,
     backgroundColor: "rgba(255,255,255,0.06)",
     borderRadius: RADIUS.lg,
     borderWidth: 1,
@@ -491,6 +511,10 @@ const styles = StyleSheet.create({
   actionBtnActive: {
     backgroundColor: "rgba(37,99,235,0.15)",
     borderColor: "rgba(37,99,235,0.4)",
+  },
+  actionBtnNavigate: {
+    backgroundColor: "rgba(6,182,212,0.12)",
+    borderColor: "rgba(6,182,212,0.3)",
   },
   actionBtnEmoji: { fontSize: 20, marginBottom: 4 },
   actionBtnText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: "600" },

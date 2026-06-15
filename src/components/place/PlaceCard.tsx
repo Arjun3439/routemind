@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { Place } from "@/types";
@@ -18,6 +19,7 @@ import {
   CATEGORY_LABELS,
 } from "@/constants";
 import { getScoreLabel, getScoreColor } from "@/services/recommendation.service";
+import { openMapsNavigation } from "@/utils/openMapsNavigation";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.72;
@@ -112,17 +114,30 @@ export default function PlaceCard({
           )}
         </View>
 
-        {/* Detail Button */}
-        <TouchableOpacity style={styles.detailButton} onPress={onDetailPress}>
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.secondary]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.detailGradient}
+        {/* Actions Row */}
+        <View style={styles.cardActionRow}>
+          <TouchableOpacity style={styles.detailButton} onPress={onDetailPress}>
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.secondary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.detailGradient}
+            >
+              <Text style={styles.detailButtonText}>Details</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navigateButton}
+            onPress={() =>
+              openMapsNavigation(place.lat, place.lng, place.name).catch(() =>
+                Alert.alert("Error", "Could not open Google Maps.")
+              )
+            }
           >
-            <Text style={styles.detailButtonText}>View Details →</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <Text style={styles.navigateButtonText}>🧭 Nav</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -142,8 +157,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
 
-  // Image
-  imageContainer: { position: "relative", height: 160 },
+  // Image — reduced to 120px so buttons always stay visible in the bottom sheet
+  imageContainer: { position: "relative", height: 120 },
   image: { width: "100%", height: "100%" },
   imagePlaceholder: {
     width: "100%",
@@ -223,7 +238,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
 
-  detourRow: { flexDirection: "row", gap: SPACING.xs, marginBottom: SPACING.md },
+  detourRow: { flexDirection: "row", gap: SPACING.xs, marginBottom: SPACING.sm },
   detourBadge: {
     backgroundColor: "rgba(37,99,235,0.15)",
     borderRadius: RADIUS.full,
@@ -239,10 +254,33 @@ const styles = StyleSheet.create({
   },
   tipText: { fontSize: FONT_SIZE.xs, color: COLORS.accent, fontWeight: "600" },
 
-  detailButton: { borderRadius: RADIUS.md, overflow: "hidden" },
+  cardActionRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  detailButton: { flex: 2, borderRadius: RADIUS.md, overflow: "hidden" },
   detailGradient: {
     paddingVertical: SPACING.sm,
     alignItems: "center",
   },
   detailButtonText: { fontSize: FONT_SIZE.sm, fontWeight: "700", color: "#fff" },
+
+  // Navigate button
+  navigateButton: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(6,182,212,0.12)",
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: "rgba(6,182,212,0.3)",
+    paddingVertical: SPACING.sm,
+  },
+  navigateButtonText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: "700",
+    color: COLORS.secondary,
+  },
 });

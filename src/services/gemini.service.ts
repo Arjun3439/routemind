@@ -3,7 +3,7 @@ import type { AIFilters, PlaceCategory, PlaceAISummary, RouteAISummary, TravelSt
 import { supabase } from "./supabase.client";
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY!;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const PROMPT_TEMPLATE = (userPrompt: string) => `
 You are a smart travel filter engine for a route discovery app.
@@ -41,54 +41,66 @@ Respond ONLY with the JSON, no markdown fences, no explanation.
 
 export const geminiService = {
   async parsePrompt(userPrompt: string): Promise<AIFilters> {
-    try {
-      const response = await axios.post(
-        GEMINI_URL,
-        {
-          contents: [
-            {
-              parts: [{ text: PROMPT_TEMPLATE(userPrompt) }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.3,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          },
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          ],
-        },
-        {
-          timeout: 30000,
-          headers: { "Content-Type": "application/json" },
+    // Retry up to 3 times with exponential backoff on 503/network errors
+    let lastError: any;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          // Wait 2s, then 4s before each retry
+          await new Promise((res) => setTimeout(res, attempt * 2000));
         }
-      );
+        const response = await axios.post(
+          GEMINI_URL,
+          {
+            contents: [
+              {
+                parts: [{ text: PROMPT_TEMPLATE(userPrompt) }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.3,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            },
+            safetySettings: [
+              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            ],
+          },
+          {
+            timeout: 30000,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
 
-      const candidate = response.data?.candidates?.[0];
-      if (candidate?.finishReason === "MAX_TOKENS") {
-        throw new Error("Gemini response was truncated (MAX_TOKENS)");
+        const candidate = response.data?.candidates?.[0];
+        if (candidate?.finishReason === "MAX_TOKENS") {
+          throw new Error("Gemini response was truncated (MAX_TOKENS)");
+        }
+
+        const rawText = candidate?.content?.parts?.[0]?.text;
+        if (!rawText) throw new Error("No response from Gemini");
+
+        // Clean up and parse JSON
+        const cleaned = rawText
+          .replace(/```json\n?/g, "")
+          .replace(/```\n?/g, "")
+          .trim();
+
+        const parsed = JSON.parse(cleaned);
+        return validateAndNormalizeFilters(parsed);
+      } catch (error: any) {
+        lastError = error;
+        const status = error?.response?.status;
+        // Only retry on 503 (overloaded) or 429 (rate limit) or network errors
+        if (status && status !== 503 && status !== 429) break;
       }
-
-      const rawText = candidate?.content?.parts?.[0]?.text;
-      if (!rawText) throw new Error("No response from Gemini");
-
-      // Clean up and parse JSON
-      const cleaned = rawText
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
-
-      const parsed = JSON.parse(cleaned);
-      return validateAndNormalizeFilters(parsed);
-    } catch (error: any) {
-      console.error("Gemini API error:", error?.message || error);
-
-      // Return sensible defaults if Gemini fails
-      return getDefaultFilters(userPrompt);
     }
+
+    // All retries failed — use smart keyword-based defaults so app still works
+    console.warn("Gemini API unavailable, using default filters:", lastError?.message);
+    return getDefaultFilters(userPrompt);
   },
 
   async generatePlaceInsight(placeName: string, category: string, prompt: string): Promise<string> {
@@ -317,4 +329,103 @@ export async function generateTravelStory(tripId: string): Promise<TravelStorySu
     console.error("Travel Story Summary Error:", error);
     return null;
   }
+}
+
+// ============================================================
+// NEW — Gemini Review Summary (additive, do not edit above)
+// ============================================================
+
+/**
+ * A single Google Place review as returned by the Places Details API.
+ * Mirrors the interface in google-reviews.service.ts (kept local to avoid
+ * cross-service coupling).
+ */
+export interface GoogleReview {
+  author_name: string;
+  rating: number;
+  text: string;
+  relative_time_description?: string;
+}
+
+/**
+ * Given a placeId and its Google Place reviews, asks Gemini to produce a
+ * concise 3-5 bullet summary covering:
+ *   - what people commonly praise
+ *   - common complaints (if any)
+ *   - best time to visit (if mentioned)
+ *   - any standout practical tips
+ *
+ * Returns a plain string[] (one sentence per bullet, no markdown).
+ * Returns [] on any error or if reviews is empty — callers should
+ * silently hide the section in that case.
+ *
+ * Intentionally lightweight: low temperature, small token budget,
+ * short timeout — safe to call per place in a result list.
+ */
+export async function summarizePlaceReviews(
+  placeId: string,
+  reviews: GoogleReview[]
+): Promise<string[]> {
+  if (!reviews || reviews.length === 0) return [];
+
+  let attempt = 0;
+  while (attempt < 2) {
+    try {
+      // Build a compact review digest (avoid huge prompts)
+      const digest = reviews
+        .slice(0, 5)
+        .map((r) => `[${r.rating}★] ${r.text?.trim() || ""}`)
+        .filter((line) => line.length > 10)
+        .join("\n");
+
+      if (!digest) return [];
+
+      const prompt = `You are a travel assistant. Summarize these Google reviews for place ID "${placeId}" in 3 to 5 short, plain-English bullet points.
+
+Reviews:
+${digest}
+
+Rules:
+- Each bullet must be ONE concise sentence (max 15 words).
+- Cover: what people love, any complaints, best time to visit (if mentioned), any standout tips.
+- Do NOT use markdown or bullet characters (no asterisks, no dashes) — just output plain sentences, one per line.
+- No explanation, no intro, no extra text.`;
+
+      const response = await axios.post(
+        GEMINI_URL,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 300,
+            topP: 0.9,
+          },
+        },
+        {
+          timeout: 15000, // Increased to 15s
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const rawText: string | undefined =
+        response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) return [];
+
+      // Parse by splitting on newlines and cleaning up any accidental bullet chars
+      return rawText
+        .split("\n")
+        .map((line) => line.replace(/^[\*\-\•\d\.]+\s*/, "").trim())
+        .filter((line) => line.length > 5)
+        .slice(0, 5);
+    } catch (error) {
+      attempt++;
+      if (attempt >= 2) {
+        console.warn("summarizePlaceReviews error:", (error as any)?.message || error);
+        return [];
+      }
+      // Wait 1.5s before retrying a 503/Network Error
+      await new Promise((res) => setTimeout(res, 1500));
+    }
+  }
+  return [];
 }
