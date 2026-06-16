@@ -133,44 +133,63 @@ export async function getPlaceNominations(placeId: string): Promise<HiddenGemNom
 }
 
 /**
- * Vote on a hidden gem nomination directly.
- * Alternatively, users can vote on the associated post (the triggers will sync counts if we map them, 
- * but for V3 we can simplify by having users vote on the post, and keeping the nomination table as metadata. 
- * Actually, our trigger checks `hidden_gem_nominations` table, so we need a specific function 
- * or we need a trigger to sync post votes to the nomination.
- * For simplicity in this service, let's update the nomination's votes directly.
+ * Cast or change a vote on a hidden gem nomination.
+ *
+ * Calls the `vote_on_hidden_gem` Postgres RPC which atomically:
+ *   - Upserts the vote in `hidden_gem_votes` (UNIQUE per user+nomination)
+ *   - Handles vote toggles (same value = remove vote)
+ *   - Handles vote flips (upvote → downvote)
+ *   - Recomputes upvote_count / downvote_count on `hidden_gem_nominations`
+ *   - Auto-approves and marks `places.is_hidden_gem = true` via existing trigger
+ *
+ * Returns the updated nomination row so the caller can refresh UI with
+ * authoritative counts rather than relying on optimistic local state.
  */
 export async function voteOnNomination(
   nominationId: string,
   userId: string,
   value: 1 | -1
-): Promise<void> {
-  // Check existing vote (mocking a direct update for now)
-  // In a real app, you'd want a separate votes table for nominations or to sync with post votes.
-  // The V3 spec specifies a unified `votes` table that supports 'post' or 'comment'.
-  // Since nominations are linked to a post, users will vote on the 'post', and we should update 
-  // the nomination via a trigger or here manually. Let's do it manually here for the nomination row.
-  
-  // NOTE: The trigger check_hidden_gem_approval runs BEFORE UPDATE on hidden_gem_nominations.
-  // So we just need to update the upvote_count/downvote_count directly.
+): Promise<HiddenGemNomination> {
+  const { data, error } = await supabase.rpc("vote_on_hidden_gem", {
+    p_nomination_id: nominationId,
+    p_user_id: userId,
+    p_value: value,
+  });
 
-  const { data: nom } = await supabase
-    .from("hidden_gem_nominations")
-    .select("upvote_count, downvote_count")
-    .eq("id", nominationId)
-    .single();
+  if (error) throw new Error(`Vote failed: ${error.message}`);
 
-  if (!nom) throw new Error("Nomination not found");
+  const nom = Array.isArray(data) ? data[0] : data;
+  if (!nom) throw new Error("No nomination returned from vote RPC");
 
-  if (value === 1) {
-    await supabase
-      .from("hidden_gem_nominations")
-      .update({ upvote_count: nom.upvote_count + 1 })
-      .eq("id", nominationId);
-  } else {
-    await supabase
-      .from("hidden_gem_nominations")
-      .update({ downvote_count: nom.downvote_count + 1 })
-      .eq("id", nominationId);
-  }
+  return {
+    id: nom.id,
+    placeId: nom.place_id,
+    nominatedBy: nom.nominated_by,
+    postId: nom.post_id,
+    upvoteCount: nom.upvote_count ?? 0,
+    downvoteCount: nom.downvote_count ?? 0,
+    status: nom.status,
+    approvedAt: nom.approved_at,
+    createdAt: nom.created_at,
+  };
+}
+
+/**
+ * Returns the current user's vote value (1, -1) on a nomination,
+ * or null if they have not voted.
+ */
+export async function getUserVoteOnNomination(
+  nominationId: string,
+  userId: string
+): Promise<1 | -1 | null> {
+  const { data, error } = await supabase
+    .from("hidden_gem_votes")
+    .select("value")
+    .eq("nomination_id", nominationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) return null;
+  if (!data) return null;
+  return data.value as 1 | -1;
 }

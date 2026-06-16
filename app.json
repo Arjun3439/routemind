@@ -21,7 +21,8 @@
         "NSLocationWhenInUseUsageDescription": "RouteMind uses your location to find places along your route.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "RouteMind uses your location to send smart notifications when you approach must-visit places.",
         "NSLocationAlwaysUsageDescription": "RouteMind uses your location in the background to notify you about nearby stops.",
-        "LSApplicationQueriesSchemes": ["comgooglemaps", "googlemaps", "maps", "geo"]
+        "LSApplicationQueriesSchemes": ["comgooglemaps", "googlemaps", "maps", "geo"],
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"]
       },
       "config": {
         "googleMapsApiKey": ""
@@ -37,6 +38,9 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "WAKE_LOCK"
@@ -68,6 +72,7 @@
           "defaultChannel": "routemind"
         }
       ],
+      "expo-task-manager",
       "expo-font",
       "expo-web-browser"
     ],

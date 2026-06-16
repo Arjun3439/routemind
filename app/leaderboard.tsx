@@ -1,69 +1,76 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from "@/constants";
+import {
+  getGlobalLeaderboard,
+  getRegionalLeaderboard,
+  type LeaderboardEntry,
+  type LeaderboardCategory,
+  type LeaderboardRegion,
+} from "@/services/leaderboard.service";
 
-type TimeFrame = "weekly" | "all_time";
+// ─── Types ────────────────────────────────────────────────────
 
-const MOCK_LEADERBOARD = [
-  { id: "1", name: "Sarah Explorer", points: 15420, rank: 1, avatar: null },
-  { id: "2", name: "RoadWarrior99", points: 14200, rank: 2, avatar: null },
-  { id: "3", name: "MountainGoat", points: 13500, rank: 3, avatar: null },
-  { id: "4", name: "CitySlicker", points: 12100, rank: 4, avatar: null },
-  { id: "5", name: "VanLifeNomad", points: 11800, rank: 5, avatar: null },
-  { id: "6", name: "WeekendDriver", points: 10500, rank: 6, avatar: null },
-  { id: "7", name: "DesertFox", points: 9200, rank: 7, avatar: null },
-  { id: "8", name: "CoastalCruiser", points: 8900, rank: 8, avatar: null },
+type ScopeTab = "global" | "regional";
+
+const CATEGORIES: { key: LeaderboardCategory; label: string; emoji: string }[] = [
+  { key: "overall", label: "Top Contributors", emoji: "🏆" },
+  { key: "food", label: "Food Explorers", emoji: "🍜" },
+  { key: "coffee", label: "Coffee Hunters", emoji: "☕" },
+  { key: "hidden_gem", label: "Gem Finders", emoji: "💎" },
+  { key: "photography", label: "Photographers", emoji: "📸" },
 ];
+
+const REGIONS: { key: LeaderboardRegion; label: string }[] = [
+  { key: "Tamil Nadu", label: "Tamil Nadu" },
+  { key: "Karnataka", label: "Karnataka" },
+  { key: "Kerala", label: "Kerala" },
+  { key: "Sri Lanka", label: "Sri Lanka" },
+];
+
+const LEVEL_COLORS: Record<string, string> = {
+  traveler: "#94a3b8",
+  explorer: "#60a5fa",
+  guide: "#34d399",
+  expert: "#f59e0b",
+  legend: "#e11d48",
+};
+
+// ─── Main Screen ──────────────────────────────────────────────
 
 export default function LeaderboardScreen() {
   const router = useRouter();
-  const [timeframe, setTimeframe] = useState<TimeFrame>("weekly");
+  const [scope, setScope] = useState<ScopeTab>("global");
+  const [category, setCategory] = useState<LeaderboardCategory>("overall");
+  const [region, setRegion] = useState<LeaderboardRegion>("Tamil Nadu");
 
-  const renderTopThree = () => {
-    const top3 = MOCK_LEADERBOARD.slice(0, 3);
-    if (top3.length < 3) return null;
+  const { data: entries = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ["leaderboard", scope, category, scope === "regional" ? region : null],
+    queryFn: () =>
+      scope === "global"
+        ? getGlobalLeaderboard(category)
+        : getRegionalLeaderboard(category, region),
+    staleTime: 1000 * 60 * 5, // 5 min cache
+  });
 
-    return (
-      <View style={styles.topThreeContainer}>
-        {/* Rank 2 */}
-        <View style={[styles.podiumItem, { marginTop: 40 }]}>
-          <Text style={styles.podiumRank}>2</Text>
-          <View style={[styles.podiumAvatar, { borderColor: "#C0C0C0" }]}>
-            <Ionicons name="person" size={24} color={COLORS.textSecondary} />
-          </View>
-          <Text style={styles.podiumName} numberOfLines={1}>{top3[1].name}</Text>
-          <Text style={styles.podiumPoints}>{top3[1].points}</Text>
-        </View>
-
-        {/* Rank 1 */}
-        <View style={styles.podiumItem}>
-          <Text style={[styles.podiumRank, { color: "#FFD700" }]}>👑</Text>
-          <View style={[styles.podiumAvatar, { borderColor: "#FFD700", width: 80, height: 80, borderRadius: 40 }]}>
-            <Ionicons name="person" size={32} color={COLORS.textSecondary} />
-          </View>
-          <Text style={[styles.podiumName, { fontWeight: "800", fontSize: FONT_SIZE.base }]} numberOfLines={1}>
-            {top3[0].name}
-          </Text>
-          <Text style={[styles.podiumPoints, { color: COLORS.primary }]}>{top3[0].points}</Text>
-        </View>
-
-        {/* Rank 3 */}
-        <View style={[styles.podiumItem, { marginTop: 60 }]}>
-          <Text style={styles.podiumRank}>3</Text>
-          <View style={[styles.podiumAvatar, { borderColor: "#CD7F32" }]}>
-            <Ionicons name="person" size={24} color={COLORS.textSecondary} />
-          </View>
-          <Text style={styles.podiumName} numberOfLines={1}>{top3[2].name}</Text>
-          <Text style={styles.podiumPoints}>{top3[2].points}</Text>
-        </View>
-      </View>
-    );
-  };
+  const top3 = entries.slice(0, 3);
+  const rest = entries.slice(3);
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
@@ -72,49 +79,174 @@ export default function LeaderboardScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, timeframe === "weekly" && styles.activeTab]}
-          onPress={() => setTimeframe("weekly")}
-        >
-          <Text style={[styles.tabText, timeframe === "weekly" && styles.activeTabText]}>This Week</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tab, timeframe === "all_time" && styles.activeTab]}
-          onPress={() => setTimeframe("all_time")}
-        >
-          <Text style={[styles.tabText, timeframe === "all_time" && styles.activeTabText]}>All Time</Text>
-        </TouchableOpacity>
+      {/* Scope tabs: Global / Regional */}
+      <View style={styles.scopeTabRow}>
+        {(["global", "regional"] as ScopeTab[]).map((s) => (
+          <TouchableOpacity
+            key={s}
+            style={[styles.scopeTab, scope === s && styles.scopeTabActive]}
+            onPress={() => setScope(s)}
+          >
+            <Text style={[styles.scopeTabText, scope === s && styles.scopeTabTextActive]}>
+              {s === "global" ? "🌍 Global" : "📍 Regional"}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        {renderTopThree()}
-
-        <View style={styles.listContainer}>
-          {MOCK_LEADERBOARD.slice(3).map((user) => (
-            <View key={user.id} style={styles.row}>
-              <Text style={styles.rowRank}>{user.rank}</Text>
-              <View style={styles.rowAvatar}>
-                <Ionicons name="person" size={16} color={COLORS.textSecondary} />
-              </View>
-              <Text style={styles.rowName}>{user.name}</Text>
-              <Text style={styles.rowPoints}>{user.points} pts</Text>
-            </View>
+      {/* Region picker (only visible in regional tab) */}
+      {scope === "regional" && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.regionRow}
+        >
+          {REGIONS.map((r) => (
+            <TouchableOpacity
+              key={r.key}
+              style={[styles.regionChip, region === r.key && styles.regionChipActive]}
+              onPress={() => setRegion(r.key)}
+            >
+              <Text style={[styles.regionChipText, region === r.key && styles.regionChipTextActive]}>
+                {r.label}
+              </Text>
+            </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
+      )}
 
+      {/* Category tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoryRow}
+      >
+        {CATEGORIES.map((c) => (
+          <TouchableOpacity
+            key={c.key}
+            style={[styles.categoryChip, category === c.key && styles.categoryChipActive]}
+            onPress={() => setCategory(c.key)}
+          >
+            <Text style={[styles.categoryEmoji]}>{c.emoji}</Text>
+            <Text style={[styles.categoryChipText, category === c.key && styles.categoryChipTextActive]}>
+              {c.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
+
+      {/* Content */}
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading rankings…</Text>
+        </View>
+      ) : isError ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyEmoji}>⚠️</Text>
+          <Text style={styles.emptyTitle}>Failed to load</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : entries.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyEmoji}>🏜️</Text>
+          <Text style={styles.emptyTitle}>No rankings yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Be the first to explore and earn XP!
+          </Text>
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {/* Podium — top 3 */}
+          {top3.length >= 3 && <PodiumSection top3={top3} />}
+
+          {/* Rest of the list */}
+          {rest.length > 0 && (
+            <View style={styles.listContainer}>
+              {rest.map((entry) => (
+                <LeaderboardRow key={entry.userId} entry={entry} />
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
+// ─── Sub-components ───────────────────────────────────────────
+
+function PodiumSection({ top3 }: { top3: LeaderboardEntry[] }) {
+  const levelColor = (level: string) => LEVEL_COLORS[level] ?? COLORS.textSecondary;
+
+  const PodiumItem = ({
+    entry,
+    size,
+    marginTop,
+    medalColor,
+    rankLabel,
+  }: {
+    entry: LeaderboardEntry;
+    size: number;
+    marginTop: number;
+    medalColor: string;
+    rankLabel: string;
+  }) => (
+    <View style={[styles.podiumItem, { marginTop }]}>
+      <Text style={[styles.podiumRank, { color: medalColor }]}>{rankLabel}</Text>
+      <View style={[styles.podiumAvatar, { width: size, height: size, borderRadius: size / 2, borderColor: medalColor }]}>
+        {entry.avatarUrl ? (
+          <Image source={{ uri: entry.avatarUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+        ) : (
+          <Ionicons name="person" size={size * 0.4} color={COLORS.textSecondary} />
+        )}
+      </View>
+      <Text style={styles.podiumName} numberOfLines={1}>{entry.userName}</Text>
+      <Text style={[styles.podiumLevel, { color: levelColor(entry.level) }]}>{entry.level}</Text>
+      <Text style={styles.podiumPoints}>{entry.score.toLocaleString()} pts</Text>
+    </View>
+  );
+
+  return (
+    <View style={styles.topThreeContainer}>
+      <PodiumItem entry={top3[1]} size={56} marginTop={40} medalColor="#C0C0C0" rankLabel="2" />
+      <PodiumItem entry={top3[0]} size={72} marginTop={0} medalColor="#FFD700" rankLabel="👑" />
+      <PodiumItem entry={top3[2]} size={56} marginTop={56} medalColor="#CD7F32" rankLabel="3" />
+    </View>
+  );
+}
+
+function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
+  const levelColor = LEVEL_COLORS[entry.level] ?? COLORS.textSecondary;
+  return (
+    <View style={styles.row}>
+      <Text style={styles.rowRank}>#{entry.rank}</Text>
+      <View style={styles.rowAvatar}>
+        {entry.avatarUrl ? (
+          <Image source={{ uri: entry.avatarUrl }} style={styles.rowAvatarImage} />
+        ) : (
+          <Ionicons name="person" size={16} color={COLORS.textSecondary} />
+        )}
+      </View>
+      <View style={styles.rowInfo}>
+        <Text style={styles.rowName}>{entry.userName}</Text>
+        <Text style={[styles.rowLevel, { color: levelColor }]}>{entry.level}</Text>
+      </View>
+      {entry.hiddenGems > 0 && (
+        <Text style={styles.rowGems}>💎 {entry.hiddenGems}</Text>
+      )}
+      <Text style={styles.rowPoints}>{entry.score.toLocaleString()} pts</Text>
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -122,87 +254,120 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
   },
-  iconButton: {
-    padding: 8,
-  },
+  iconButton: { padding: 8 },
   headerTitle: {
     fontSize: FONT_SIZE.lg,
     fontWeight: "700",
     color: COLORS.textPrimary,
   },
-  tabsContainer: {
+
+  // Scope tabs
+  scopeTabRow: {
     flexDirection: "row",
-    paddingHorizontal: SPACING.xl,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.xl,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.xs,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: 4,
   },
-  tab: {
+  scopeTab: {
     flex: 1,
     paddingVertical: SPACING.sm,
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    borderRadius: RADIUS.md,
   },
-  activeTab: {
-    borderBottomColor: COLORS.primary,
+  scopeTabActive: { backgroundColor: COLORS.primary },
+  scopeTabText: { fontSize: FONT_SIZE.sm, fontWeight: "600", color: COLORS.textSecondary },
+  scopeTabTextActive: { color: "#fff" },
+
+  // Region picker
+  regionRow: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
   },
-  tabText: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: "600",
-    color: COLORS.textSecondary,
+  regionChip: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
-  activeTabText: {
-    color: COLORS.primary,
+  regionChipActive: { borderColor: COLORS.primary, backgroundColor: "rgba(37,99,235,0.15)" },
+  regionChipText: { fontSize: FONT_SIZE.xs, fontWeight: "600", color: COLORS.textSecondary },
+  regionChipTextActive: { color: COLORS.primary },
+
+  // Category chips
+  categoryRow: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
   },
-  scrollContent: {
-    paddingBottom: SPACING.xl,
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
+  categoryChipActive: { borderColor: COLORS.accent, backgroundColor: "rgba(245,158,11,0.12)" },
+  categoryEmoji: { fontSize: 14 },
+  categoryChipText: { fontSize: FONT_SIZE.xs, fontWeight: "600", color: COLORS.textSecondary },
+  categoryChipTextActive: { color: COLORS.accent },
+
+  // States
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACING.sm },
+  loadingText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
+  emptyEmoji: { fontSize: 48 },
+  emptyTitle: { fontSize: FONT_SIZE.md, fontWeight: "700", color: COLORS.textPrimary },
+  emptySubtitle: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: "center", paddingHorizontal: SPACING.xl },
+  retryBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, marginTop: SPACING.sm },
+  retryText: { color: "#fff", fontWeight: "700", fontSize: FONT_SIZE.sm },
+
+  scrollContent: { paddingBottom: SPACING.xl },
+
+  // Podium
   topThreeContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "flex-start",
     paddingHorizontal: SPACING.md,
-    marginBottom: SPACING["2xl"],
+    paddingVertical: SPACING.xl,
+    gap: SPACING.sm,
   },
-  podiumItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  podiumRank: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: "800",
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
+  podiumItem: { flex: 1, alignItems: "center" },
+  podiumRank: { fontSize: FONT_SIZE.lg, fontWeight: "800", marginBottom: SPACING.xs },
   podiumAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
     borderWidth: 3,
     backgroundColor: COLORS.surfaceLight,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: SPACING.sm,
+    overflow: "hidden",
   },
   podiumName: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  podiumPoints: {
     fontSize: FONT_SIZE.xs,
     fontWeight: "700",
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
+    textAlign: "center",
+    marginBottom: 2,
   },
+  podiumLevel: { fontSize: 10, fontWeight: "600", marginBottom: 2 },
+  podiumPoints: { fontSize: FONT_SIZE.xs, fontWeight: "700", color: COLORS.textSecondary },
+
+  // List rows
   listContainer: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.xl,
     marginHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
+    overflow: "hidden",
   },
   row: {
     flexDirection: "row",
@@ -211,31 +376,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    gap: SPACING.sm,
   },
-  rowRank: {
-    width: 30,
-    fontSize: FONT_SIZE.base,
-    fontWeight: "700",
-    color: COLORS.textSecondary,
-  },
+  rowRank: { width: 36, fontSize: FONT_SIZE.sm, fontWeight: "700", color: COLORS.textSecondary },
   rowAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: COLORS.surfaceLight,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: SPACING.sm,
+    justifyContent: "center", alignItems: "center",
+    overflow: "hidden",
   },
-  rowName: {
-    flex: 1,
-    fontSize: FONT_SIZE.base,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-  },
-  rowPoints: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: "700",
-    color: COLORS.primary,
-  },
+  rowAvatarImage: { width: 36, height: 36, borderRadius: 18 },
+  rowInfo: { flex: 1 },
+  rowName: { fontSize: FONT_SIZE.sm, fontWeight: "600", color: COLORS.textPrimary },
+  rowLevel: { fontSize: 10, fontWeight: "600", textTransform: "capitalize" },
+  rowGems: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
+  rowPoints: { fontSize: FONT_SIZE.sm, fontWeight: "700", color: COLORS.primary },
 });
