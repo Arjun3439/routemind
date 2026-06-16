@@ -188,7 +188,8 @@ CREATE INDEX IF NOT EXISTS idx_live_reports_reporter_id ON live_reports(reporter
 CREATE INDEX IF NOT EXISTS idx_live_reports_place_id ON live_reports(place_id);
 CREATE INDEX IF NOT EXISTS idx_live_reports_route_community ON live_reports(route_community_id);
 CREATE INDEX IF NOT EXISTS idx_live_reports_expires_at ON live_reports(expires_at);
-CREATE INDEX IF NOT EXISTS idx_live_reports_active ON live_reports(expires_at) WHERE expires_at > NOW();
+-- Note: partial index with NOW() not used here — NOW() is STABLE not IMMUTABLE.
+-- Filter active reports at query time: WHERE expires_at > NOW()
 
 -- ============================================================
 -- FOLLOWS TABLE
