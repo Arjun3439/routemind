@@ -42,6 +42,12 @@ export default function TabsLayout() {
           title: "Profile",
         }}
       />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Alerts",
+        }}
+      />
     </Tabs>
   );
 }

@@ -96,8 +96,50 @@ export const MAP_DEFAULTS = {
 export const LOCATION_TASK_NAME = "routemind-location-task";
 export const GEOFENCE_TASK_NAME = "routemind-geofence-task";
 
-// Geofence radius in meters
+// Geofence radius in meters (legacy, kept for backwards compat)
 export const GEOFENCE_RADIUS_METERS = 500;
+
+// ============================================================
+// Phase 7 — Smart Notifications Constants
+// ============================================================
+
+// Geofence radii by worth-stop category (km + meters)
+export const GEOFENCE_RADII = {
+  must_stop: { km: 3, meters: 3000 },
+  worth_it:  { km: 2, meters: 2000 },
+  consider:  { km: 1, meters: 1000 },
+} as const;
+
+// Worth-stop score → category thresholds
+export const WORTH_STOP_SCORE_THRESHOLDS = {
+  must_stop: 75,  // score >= 75
+  worth_it:  50,  // score 50-74
+  // consider: score < 50
+} as const;
+
+// Proximity alert thresholds (km) — each fires exactly once per stop
+export const PROXIMITY_THRESHOLDS_KM = [15, 10, 5] as const;
+
+// Route deviation threshold (meters off-polyline = alert)
+export const ROUTE_DEVIATION_THRESHOLD_METERS = 500;
+
+// Notification cooldown: don't re-notify same place within this window
+export const NOTIFICATION_COOLDOWN_HOURS = 24;
+
+// Background location tracking accuracy & interval
+export const BG_LOCATION_ACCURACY = 6;  // Location.Accuracy.BestForNavigation
+export const BG_LOCATION_INTERVAL_MS = 5000;  // update every 5 seconds
+export const BG_LOCATION_DISTANCE_M  = 10;    // or every 10 meters
+
+// Foreground tracking
+export const FG_LOCATION_INTERVAL_MS = 3000;
+export const FG_LOCATION_DISTANCE_M  = 5;
+
+// Default speed when GPS speed is unavailable
+export const DEFAULT_SPEED_KMH = 60;
+
+// Min speed (km/h) to consider user is actively driving
+export const MIN_DRIVING_SPEED_KMH = 10;
 
 // API config
 export const API_TIMEOUTS = {

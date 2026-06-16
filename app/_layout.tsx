@@ -5,9 +5,44 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
+import Constants from "expo-constants";
 import { queryClient } from "@/utils/queryClient";
 import { View, ActivityIndicator } from "react-native";
 import { COLORS } from "@/constants";
+import {
+  configureForegroundNotificationHandler,
+  handleNotificationResponse,
+} from "@/services/notification.service";
+import { defineBackgroundLocationTask } from "@/services/location-tracking.service";
+import { useTripMonitorStore } from "@/store/trip-monitor.store";
+
+// ============================================================
+// Expo Go detection
+// Remote push + background tasks are NOT available in Expo Go
+// SDK 53+. Local notifications still work fine.
+// Use a development build for full functionality.
+// ============================================================
+const IS_EXPO_GO = Constants.appOwnership === "expo";
+
+// ============================================================
+// Phase 7: Register background location task at module scope.
+// MUST be called before the app renders.
+// Skipped in Expo Go — TaskManager doesn't work there.
+// ============================================================
+if (!IS_EXPO_GO) {
+  defineBackgroundLocationTask((update) => {
+    useTripMonitorStore.getState().setLocation(update);
+  });
+}
+
+// ============================================================
+// Configure foreground notification display.
+// setNotificationHandler is safe in Expo Go for local notifs,
+// but we guard it here to avoid any SDK conflicts.
+// ============================================================
+if (!IS_EXPO_GO) {
+  configureForegroundNotificationHandler();
+}
 
 // Secure token cache for Clerk
 const tokenCache = {
@@ -48,6 +83,27 @@ function AuthGuard() {
     }
   }, [isLoaded, isSignedIn, segments]);
 
+  // Phase 7: notification deep-link handler
+  // Skipped in Expo Go — push response listener is not needed
+  // for local-only notifications in development.
+  useEffect(() => {
+    if (IS_EXPO_GO) return;
+
+    // Lazy import to avoid module-level push token auto-registration
+    // triggering the Expo Go warning during development.
+    let sub: { remove: () => void } | null = null;
+
+    import("expo-notifications").then((Notifications) => {
+      sub = Notifications.addNotificationResponseReceivedListener(
+        handleNotificationResponse
+      );
+    });
+
+    return () => {
+      sub?.remove();
+    };
+  }, []);
+
   if (!isLoaded) {
     return (
       <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: "center", alignItems: "center" }}>
@@ -65,6 +121,14 @@ function AuthGuard() {
         options={{
           presentation: "modal",
           animation: "slide_from_bottom",
+        }}
+      />
+      <Stack.Screen
+        name="trip/active"
+        options={{
+          presentation: "fullScreenModal",
+          animation: "slide_from_bottom",
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen

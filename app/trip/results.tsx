@@ -18,7 +18,9 @@ import { useTripStore, useLocationStore } from "@/store";
 import { geminiService } from "@/services/gemini.service";
 import { geocodeAddress, getDirections, decodePolyline } from "@/services/maps.service";
 import { discoverPlacesAlongRoute, getScoreLabel, getScoreColor } from "@/services/recommendation.service";
-import { startGeofenceMonitoring } from "@/services/notification.service";
+import { buildActiveGeofences } from "@/services/geofence.service";
+import { useTripMonitorStore } from "@/store/trip-monitor.store";
+
 import { tripService } from "@/services/supabase.service";
 import type { Place, AIFilters } from "@/types";
 import PlaceCard from "@/components/place/PlaceCard";
@@ -68,6 +70,9 @@ export default function TripResultsScreen() {
     setIsDiscovering,
   } = useTripStore();
 
+  const { setActiveGeofences } = useTripMonitorStore();
+
+
   const [step, setStep] = useState<DiscoveryStep>("idle");
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [aiFilters, setLocalAIFilters] = useState<AIFilters | null>(null);
@@ -112,10 +117,11 @@ export default function TripResultsScreen() {
       const places = await discoverPlacesAlongRoute(route.polyline, filters);
       setDiscoveredPlaces(places);
 
-      // Step 5: Start geofencing for top places
+      // Step 5: Set up geofences for top places
       if (places.length > 0) {
-        await startGeofenceMonitoring(places);
+        setActiveGeofences(buildActiveGeofences(places));
       }
+
 
       // Step 6: Save trip to Supabase
       if (user?.id) {

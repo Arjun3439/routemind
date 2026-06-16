@@ -99,6 +99,8 @@ export const useLocationStore = create<LocationState>()(
 );
 
 export * from "./community";
+export * from "./trip-monitor.store";
+
 
 // ============================================================
 // UI Store
