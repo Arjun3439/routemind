@@ -23,6 +23,7 @@ import { scheduleApproachNotification } from "@/services/notification.service";
 import type { Tip } from "@/types";
 import { openMapsNavigation } from "@/utils/openMapsNavigation";
 import ReviewSummarySection from "@/components/place/ReviewSummarySection";
+import { geminiService } from "@/services/gemini.service";
 
 const { width } = Dimensions.get("window");
 
@@ -46,6 +47,19 @@ export default function PlaceDetailScreen() {
     queryKey: ["tips", id],
     queryFn: () => tipService.getTipsByPlace(id!, user?.id),
     enabled: !!id,
+  });
+
+  // Fetch AI Summary
+  const { data: aiSummary, isLoading: aiLoading } = useQuery({
+    queryKey: ["ai_summary", id],
+    queryFn: async () => {
+      // First check if place has ai_summary locally in db
+      const p = await placeService.getPlaceById(id!);
+      if (p?.aiSummary) return p.aiSummary;
+      // If not, generate and save it
+      return geminiService.generatePlaceAISummary(id!);
+    },
+    enabled: !!id && activeTab === "ai",
   });
 
   // Create tip mutation
@@ -324,9 +338,42 @@ export default function PlaceDetailScreen() {
           )}
 
           {activeTab === "ai" && (
-            <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderEmoji}>✨</Text>
-              <Text style={styles.placeholderText}>AI Summary is generating...</Text>
+            <View style={styles.aiContainer}>
+              {aiLoading ? (
+                <View style={styles.placeholderContainer}>
+                  <Text style={styles.placeholderEmoji}>✨</Text>
+                  <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.md }} />
+                  <Text style={styles.placeholderText}>Generating AI Summary...</Text>
+                </View>
+              ) : aiSummary ? (
+                <View style={styles.aiCard}>
+                  <View style={styles.aiHeader}>
+                    <Text style={styles.aiHeaderEmoji}>✨</Text>
+                    <Text style={styles.aiHeaderText}>Community AI Summary</Text>
+                  </View>
+                  <View style={styles.aiContent}>
+                    <Text style={styles.aiLabel}>Famous For</Text>
+                    <Text style={styles.aiValue}>{aiSummary.famousFor}</Text>
+
+                    <Text style={styles.aiLabel}>Best Time to Visit</Text>
+                    <Text style={styles.aiValue}>{aiSummary.bestTimeToVisit}</Text>
+
+                    <Text style={styles.aiLabel}>Crowd Pattern</Text>
+                    <Text style={styles.aiValue}>{aiSummary.crowdPattern}</Text>
+
+                    <Text style={styles.aiLabel}>Parking</Text>
+                    <Text style={styles.aiValue}>{aiSummary.parking}</Text>
+
+                    <Text style={styles.aiLabel}>Amenities</Text>
+                    <Text style={styles.aiValue}>{aiSummary.amenities}</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.placeholderContainer}>
+                  <Text style={styles.placeholderEmoji}>🤷</Text>
+                  <Text style={styles.placeholderText}>Not enough community data to generate summary.</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -637,5 +684,47 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     color: "#fff",
     fontWeight: "600",
+  },
+  aiContainer: {
+    marginTop: SPACING.sm,
+  },
+  aiCard: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    padding: SPACING.lg,
+  },
+  aiHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  aiHeaderEmoji: {
+    fontSize: 20,
+  },
+  aiHeaderText: {
+    color: COLORS.textPrimary,
+    fontWeight: "700",
+    fontSize: FONT_SIZE.lg,
+  },
+  aiContent: {
+    gap: SPACING.sm,
+  },
+  aiLabel: {
+    color: COLORS.secondary,
+    fontWeight: "700",
+    fontSize: FONT_SIZE.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  aiValue: {
+    color: COLORS.textPrimary,
+    fontSize: FONT_SIZE.base,
+    marginBottom: SPACING.md,
   },
 });

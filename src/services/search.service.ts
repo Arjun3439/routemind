@@ -75,15 +75,22 @@ function mapPlace(data: any): Place {
     googlePlaceId: data.google_place_id,
     name: data.name,
     address: data.address,
-    lat: data.latitude,
-    lng: data.longitude,
-    rating: data.rating,
-    totalRatings: data.total_ratings,
+    lat: data.latitude ?? data.lat, // Handle both database naming conventions
+    lng: data.longitude ?? data.lng,
     category: data.category,
+    rating: data.rating || 0,
+    totalRatings: data.total_ratings || 0,
+    priceLevel: data.price_level,
+    photoReference: data.photo_reference,
     photoUrl: data.photo_url,
     worthStopScore: data.worth_stop_score || 0,
     detourMinutes: data.detour_minutes || 0,
     detourKm: data.detour_km || 0,
+    communityScore: data.community_score || 0,
+    tipCount: data.tip_count || 0,
+    tags: data.tags || [],
+    openNow: data.open_now,
+    aiSummary: data.ai_summary || undefined,
   };
 }
 

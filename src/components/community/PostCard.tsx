@@ -18,7 +18,7 @@ export default function PostCard({ post, onVoteChange, compact = false }: PostCa
   const user = useAuthStore((s) => s.user);
 
   const handleVote = async (value: 1 | -1) => {
-    if (!user) return router.push("/(auth)/welcome");
+    if (!user) return router.push("/(auth)/sign-in");
     try {
       await communityService.vote(user.id, "post", post.id, value);
       // Optimistic update
@@ -98,6 +98,9 @@ export default function PostCard({ post, onVoteChange, compact = false }: PostCa
           </View>
           <View>
             <Text style={styles.authorName}>{post.authorName || "Traveler"}</Text>
+            {post.authorEmail ? (
+              <Text style={styles.authorEmailText}>{post.authorEmail}</Text>
+            ) : null}
             <Text style={styles.timeAgo}>{timeAgo(post.createdAt)}</Text>
           </View>
         </View>
@@ -199,6 +202,11 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontWeight: "600",
     fontSize: FONT_SIZE.sm,
+  },
+  authorEmailText: {
+    color: COLORS.textSecondary,
+    fontSize: 10,
+    marginTop: 1,
   },
   timeAgo: {
     color: COLORS.textSecondary,

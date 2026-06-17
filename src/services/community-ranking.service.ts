@@ -128,6 +128,7 @@ export async function getRankedFeed(
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       authorName: row.author_name,
+      authorEmail: row.author_email,
       authorAvatar: row.author_avatar,
       placeName: row.place_name,
       routeName: row.route_name,
@@ -174,7 +175,7 @@ export async function getFollowingFeed(
     .from("posts")
     .select(`
       *,
-      users:author_id (name, avatar_url),
+      users:author_id (name, email, avatar_url),
       places:place_id (name)
     `)
     .eq("is_deleted", false)
@@ -219,6 +220,7 @@ export async function getFollowingFeed(
     createdAt: p.created_at,
     updatedAt: p.updated_at,
     authorName: p.users?.name,
+    authorEmail: p.users?.email,
     authorAvatar: p.users?.avatar_url,
     placeName: p.places?.name,
   }));

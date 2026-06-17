@@ -33,10 +33,9 @@ export default function FollowButton({
       followService.isFollowing(user.id, targetType, targetId).then(setIsFollowing);
     }
   }, [user, targetType, targetId, initialIsFollowing]);
-
   const handlePress = async () => {
     if (!user) {
-      router.push("/(auth)/welcome");
+      router.push("/(auth)/sign-in");
       return;
     }
 

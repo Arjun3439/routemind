@@ -21,6 +21,8 @@
         "NSLocationWhenInUseUsageDescription": "RouteMind uses your location to find places along your route.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "RouteMind uses your location to send smart notifications when you approach must-visit places.",
         "NSLocationAlwaysUsageDescription": "RouteMind uses your location in the background to notify you about nearby stops.",
+        "NSPhotoLibraryUsageDescription": "RouteMind needs access to your photos to let you share pictures of places, routes, and travel stories.",
+        "NSCameraUsageDescription": "RouteMind needs access to your camera to let you take and share photos.",
         "LSApplicationQueriesSchemes": ["comgooglemaps", "googlemaps", "maps", "geo"],
         "UIBackgroundModes": ["location", "fetch", "remote-notification"]
       },
@@ -74,7 +76,14 @@
       ],
       "expo-task-manager",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RouteMind needs access to your photos to let you share pictures of places, routes, and travel stories.",
+          "cameraPermission": "RouteMind needs access to your camera to let you take and share photos."
+        }
+      ]
     ],
     "scheme": "routemind",
     "experiments": {

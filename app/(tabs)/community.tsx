@@ -58,7 +58,7 @@ export default function CommunityTab() {
       if (type === "foryou") {
         // Fetch both Supabase posts and Google review posts in parallel
         const [supabasePosts, googlePosts] = await Promise.allSettled([
-          getRankedFeed(user?.id || "anonymous", []).catch(() => [] as ScoredPost[]),
+          getRankedFeed(user?.id || "00000000-0000-0000-0000-000000000000", []).catch(() => [] as ScoredPost[]),
           fetchGoogleReviewPosts(
             currentLocation?.latitude,
             currentLocation?.longitude

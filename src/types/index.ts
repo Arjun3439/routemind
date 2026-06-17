@@ -54,6 +54,7 @@ export interface Place {
   isSaved?: boolean;
   isVisited?: boolean;
   tags: string[];
+  aiSummary?: PlaceAISummary;
 }
 
 export type PlaceCategory =
@@ -216,6 +217,7 @@ export interface Post {
   updatedAt: string;
   // Joined fields
   authorName?: string;
+  authorEmail?: string;
   authorAvatar?: string;
   authorLevel?: ReputationLevel;
   placeName?: string;
@@ -237,6 +239,7 @@ export interface Comment {
   createdAt: string;
   // Joined fields
   authorName?: string;
+  authorEmail?: string;
   authorAvatar?: string;
   authorLevel?: ReputationLevel;
   userVote?: 1 | -1 | null;

@@ -127,6 +127,12 @@ Respond with ONLY the tip, no quotes, no labels.
       return "";
     }
   },
+
+  // Export standalone V3 AI functions through geminiService object
+  generatePlaceAISummary,
+  generateRouteAISummary,
+  generateTravelStory,
+  summarizePlaceReviews,
 };
 
 function validateAndNormalizeFilters(raw: any): AIFilters {
@@ -315,7 +321,8 @@ export async function generateTravelStory(tripId: string): Promise<TravelStorySu
     });
 
     // Pick a random place as "most loved" if none has specific feedback, or first one
-    const mostLoved = tripPlaces && tripPlaces.length > 0 ? tripPlaces[0].places : null;
+    const placesObj = tripPlaces && tripPlaces.length > 0 ? tripPlaces[0].places : null;
+    const mostLoved = Array.isArray(placesObj) ? placesObj[0] : (placesObj as any);
 
     return {
       distanceKm: 0, // Would need actual route dist, defaulting to 0

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, ActivityIndicator, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, ActivityIndicator, TextInput, TouchableOpacity, Image } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from "@/constants";
 import { communityService } from "@/services/community.service";
 import { useAuthStore, useCommunityStore } from "@/store";
 import PostCard from "@/components/community/PostCard";
+import VoteButtons from "@/components/community/VoteButtons";
 import type { Post, Comment as CommentType } from "@/types";
 
 export default function PostDetailScreen() {
@@ -20,6 +21,14 @@ export default function PostDetailScreen() {
   
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/community");
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -58,7 +67,7 @@ export default function PostDetailScreen() {
   };
 
   const handleComment = async () => {
-    if (!user) return router.push("/(auth)/welcome");
+    if (!user) return router.push("/(auth)/sign-in");
     if (!newComment.trim()) return;
 
     setSubmitting(true);
@@ -82,14 +91,75 @@ export default function PostDetailScreen() {
     }
   };
 
+  const handleCommentVote = async (commentId: string, value: 1 | -1) => {
+    if (!user) return router.push("/(auth)/sign-in");
+    try {
+      await communityService.vote(user.id, "comment", commentId, value);
+      // Refresh comments to reflect vote
+      const fetchedComments = await communityService.getCommentsForPost(id, user.id);
+      setComments(fetchedComments);
+    } catch (e) {
+      console.error("Vote failed:", e);
+    }
+  };
+
+  const handleCommentRemoveVote = async (commentId: string) => {
+    if (!user) return;
+    try {
+      await communityService.removeVote(user.id, "comment", commentId);
+      const fetchedComments = await communityService.getCommentsForPost(id, user.id);
+      setComments(fetchedComments);
+    } catch (e) {
+      console.error("Remove vote failed:", e);
+    }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    if (hours < 1) return "Just now";
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  };
+
   const renderComment = (c: CommentType) => (
     <View key={c.id} style={[styles.commentCard, { marginLeft: (c.depth || 0) * SPACING.md }]}>
       <View style={styles.commentHeader}>
-        <Text style={styles.commentAuthor}>{c.authorName || "Traveler"}</Text>
-        <Text style={styles.commentTime}>• Just now</Text>
+        <View style={styles.commentAuthorRow}>
+          {c.authorAvatar ? (
+            <Image source={{ uri: c.authorAvatar }} style={styles.commentAvatar} />
+          ) : (
+            <View style={styles.commentAvatarPlaceholder}>
+              <Text style={styles.commentAvatarText}>{c.authorName?.charAt(0) || "U"}</Text>
+            </View>
+          )}
+          <View>
+            <Text style={styles.commentAuthor}>{c.authorName || "Traveler"}</Text>
+            {c.authorEmail ? (
+              <Text style={styles.commentEmailText}>{c.authorEmail}</Text>
+            ) : null}
+          </View>
+        </View>
+        <Text style={styles.commentTime}>• {timeAgo(c.createdAt)}</Text>
       </View>
       <Text style={styles.commentBody}>{c.body}</Text>
       
+      <View style={styles.commentFooter}>
+        <VoteButtons
+          upvotes={c.upvoteCount}
+          downvotes={c.downvoteCount}
+          userVote={c.userVote || null}
+          targetType="comment"
+          targetId={c.id}
+          onVote={(val) => handleCommentVote(c.id, val)}
+          onRemoveVote={() => handleCommentRemoveVote(c.id)}
+          size="small"
+        />
+        <TouchableOpacity style={styles.replyButton}>
+          <Text style={styles.replyButtonText}>Reply</Text>
+        </TouchableOpacity>
+      </View>
+
       {c.replies && c.replies.length > 0 && (
         <View style={styles.repliesContainer}>
           {c.replies.map(renderComment)}
@@ -109,7 +179,12 @@ export default function PostDetailScreen() {
   if (!post) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Post not found.</Text>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.errorText}>Post not found or has been deleted.</Text>
       </SafeAreaView>
     );
   }
@@ -117,7 +192,7 @@ export default function PostDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Post</Text>
@@ -130,6 +205,9 @@ export default function PostDetailScreen() {
         <View style={styles.commentsSection}>
           <Text style={styles.commentsTitle}>{post.commentCount} Comments</Text>
           {comments.map(renderComment)}
+          {comments.length === 0 && (
+            <Text style={styles.noCommentsText}>No comments yet. Be the first to share your thoughts!</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -200,6 +278,12 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginBottom: SPACING.md,
   },
+  noCommentsText: {
+    color: COLORS.textSecondary,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: SPACING.lg,
+  },
   commentCard: {
     marginBottom: SPACING.md,
     padding: SPACING.md,
@@ -211,12 +295,41 @@ const styles = StyleSheet.create({
   commentHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  commentAuthorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: SPACING.xs,
+  },
+  commentAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 6,
+  },
+  commentAvatarPlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.surfaceLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 6,
+  },
+  commentAvatarText: {
+    color: COLORS.textPrimary,
+    fontSize: 10,
+    fontWeight: "bold",
   },
   commentAuthor: {
     fontWeight: "600",
     color: COLORS.textPrimary,
-    marginRight: SPACING.xs,
+  },
+  commentEmailText: {
+    color: COLORS.textSecondary,
+    fontSize: 9,
+    marginTop: 1,
   },
   commentTime: {
     color: COLORS.textSecondary,
@@ -225,6 +338,20 @@ const styles = StyleSheet.create({
   commentBody: {
     color: COLORS.textPrimary,
     lineHeight: 20,
+    marginBottom: SPACING.sm,
+  },
+  commentFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.lg,
+  },
+  replyButton: {
+    padding: 4,
+  },
+  replyButtonText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: "600",
   },
   repliesContainer: {
     marginTop: SPACING.sm,

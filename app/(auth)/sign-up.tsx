@@ -111,7 +111,7 @@ export default function SignUpScreen() {
         }
       }
 
-      console.log("OAuth incomplete. signUp status:", oauthSignUp?._status, "missingFields:", oauthSignUp?.missingFields);
+      console.log("OAuth incomplete. signUp status:", oauthSignUp?.status, "missingFields:", oauthSignUp?.missingFields);
       Alert.alert(
         "Authentication Incomplete",
         "Could not complete sign in. Please check your Clerk dashboard settings (phone number may be set as required)."

@@ -32,7 +32,7 @@ export const communityService = {
       })
       .select(`
         *,
-        users:author_id (name, avatar_url),
+        users:author_id (name, email, avatar_url),
         places:place_id (name)
       `)
       .single();
@@ -46,7 +46,7 @@ export const communityService = {
       .from("posts")
       .select(`
         *,
-        users:author_id (name, avatar_url),
+        users:author_id (name, email, avatar_url),
         places:place_id (name)
       `)
       .eq("id", postId)
@@ -86,7 +86,7 @@ export const communityService = {
       .from("comments")
       .select(`
         *,
-        users:author_id (name, avatar_url)
+        users:author_id (name, email, avatar_url)
       `)
       .eq("post_id", postId)
       .eq("is_deleted", false)
@@ -134,7 +134,7 @@ export const communityService = {
       })
       .select(`
         *,
-        users:author_id (name, avatar_url)
+        users:author_id (name, email, avatar_url)
       `)
       .single();
 
@@ -195,6 +195,7 @@ function mapPost(data: any): Post {
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     authorName: data.users?.name,
+    authorEmail: data.users?.email,
     authorAvatar: data.users?.avatar_url,
     placeName: data.places?.name,
   };
@@ -212,6 +213,7 @@ function mapComment(data: any): Comment {
     isDeleted: data.is_deleted,
     createdAt: data.created_at,
     authorName: data.users?.name,
+    authorEmail: data.users?.email,
     authorAvatar: data.users?.avatar_url,
     replies: [],
     depth: 0,

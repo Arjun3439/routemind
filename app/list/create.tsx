@@ -18,7 +18,7 @@ export default function CreateListScreen() {
 
   const handleCreate = async () => {
     if (!user) {
-      router.push("/(auth)/welcome");
+      router.push("/(auth)/sign-in");
       return;
     }
 
@@ -46,10 +46,18 @@ export default function CreateListScreen() {
     }
   };
 
+  const handleClose = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/profile");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+        <TouchableOpacity onPress={handleClose} style={styles.iconButton}>
           <Ionicons name="close" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create List</Text>

@@ -72,7 +72,7 @@ export default function ListDetailScreen() {
   };
 
   const handleDuplicate = async () => {
-    if (!user) return router.push("/(auth)/welcome");
+    if (!user) return router.push("/(auth)/sign-in");
     try {
       const newList = await travelListService.duplicateList(id, user.id);
       router.push(`/list/${newList.id}`);

@@ -39,7 +39,7 @@ export default function ListsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
           <Text style={styles.emptyText}>Please sign in to view your travel lists.</Text>
-          <TouchableOpacity style={styles.authBtn} onPress={() => router.push("/(auth)/welcome")}>
+          <TouchableOpacity style={styles.authBtn} onPress={() => router.push("/(auth)/sign-in")}>
             <Text style={styles.authBtnText}>Sign In</Text>
           </TouchableOpacity>
         </View>
@@ -47,10 +47,18 @@ export default function ListsScreen() {
     );
   }
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/profile");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Travel Lists</Text>

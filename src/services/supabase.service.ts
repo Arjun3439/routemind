@@ -303,6 +303,7 @@ function mapPlace(data: any): Place {
     tipCount: data.tip_count || 0,
     tags: data.tags || [],
     openNow: data.open_now,
+    aiSummary: data.ai_summary || undefined,
   };
 }
 
