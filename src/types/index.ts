@@ -109,6 +109,81 @@ export interface Notification {
 }
 
 // ============================================================
+// Phase 7 — Smart Notifications Types
+// ============================================================
+
+export type WorthStopCategory = 'must_stop' | 'worth_it' | 'consider';
+
+export type NotificationType =
+  | 'geofence_entry'
+  | 'geofence_exit'
+  | 'proximity_alert'
+  | 'route_deviation'
+  | 'smart_recommendation';
+
+export type ProximityThresholdKm = 15 | 10 | 5;
+
+export interface GeofenceRadius {
+  category: WorthStopCategory;
+  radiusKm: number;
+  radiusMeters: number;
+}
+
+export interface ActiveGeofence {
+  place: Place;
+  category: WorthStopCategory;
+  radiusKm: number;
+  enteredAt: string | null;
+  isInside: boolean;
+  lastNotifiedAt: string | null;
+}
+
+export interface TripProgress {
+  distanceRemainingKm: number;
+  distanceTraveledKm: number;
+  totalDistanceKm: number;
+  progressPercent: number;
+  etaMinutes: number;
+  nextStop: NearbyStop | null;
+  isOffRoute: boolean;
+  offRouteMeters: number;
+  currentSpeedKmh: number;
+}
+
+export interface NearbyStop {
+  place: Place;
+  distanceKm: number;
+  etaMinutes: number;
+  detourMinutes: number;
+  worthStopCategory: WorthStopCategory;
+  triggeredThresholds: ProximityThresholdKm[];
+}
+
+export interface LocationUpdate {
+  latitude: number;
+  longitude: number;
+  speed: number | null;   // m/s from GPS, null if unavailable
+  heading: number | null;
+  accuracy: number | null;
+  timestamp: number;      // Unix ms
+}
+
+export interface LiveNotification extends Notification {
+  notificationType: NotificationType;
+  isRead: boolean;
+}
+
+export interface CreateNotificationParams {
+  userId: string;
+  placeId?: string;
+  tripId?: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  notificationType: NotificationType;
+}
+
+// ============================================================
 // AI / Gemini Types
 // ============================================================
 

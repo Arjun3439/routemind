@@ -6,11 +6,14 @@ import {
   Platform,
   Dimensions,
   Animated,
+  Text,
 } from "react-native";
 import { BlurView } from "expo-blur";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Path, Circle } from "react-native-svg";
 import { COLORS } from "@/constants";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { useTripMonitorStore, selectUnreadCount } from "@/store/trip-monitor.store";
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const TAB_BAR_HEIGHT = 88;
@@ -215,7 +218,40 @@ function CompassIcon({ color, size, filled }: { color: string; size: number; fil
   );
 }
 
-const ICONS = [HomeIcon, MapIcon, UsersIcon, CompassIcon, UserIcon];
+function BellIcon({ color, size, filled }: { color: string; size: number; filled: boolean }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"
+        stroke={color}
+        fill={filled ? color : "none"}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={filled ? 0.2 : 1}
+      />
+      {filled && (
+        <Path
+          d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"
+          stroke={color}
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+      <Path
+        d="M13.73 21a2 2 0 01-3.46 0"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+const ICONS = [HomeIcon, MapIcon, UsersIcon, CompassIcon, UserIcon, BellIcon];
+
 
 // ─── Tab Item ────────────────────────────────────────────────
 interface TabItemProps {
@@ -225,9 +261,11 @@ interface TabItemProps {
   onPress: () => void;
   onLongPress: () => void;
   tabWidth: number;
+  badgeCount?: number;
 }
 
-function TabItem({ index, label, isFocused, onPress, onLongPress, tabWidth }: TabItemProps) {
+function TabItem({ index, label, isFocused, onPress, onLongPress, tabWidth, badgeCount }: TabItemProps) {
+
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const translateYAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(isFocused ? 1 : 0.6)).current;
@@ -269,7 +307,8 @@ function TabItem({ index, label, isFocused, onPress, onLongPress, tabWidth }: Ta
     onPress();
   };
 
-  const IconComponent = ICONS[index];
+  // Safe guard: never crash if a new tab is added without a matching icon
+  const IconComponent = ICONS[index] ?? ICONS[ICONS.length - 1];
   const color = isFocused ? COLORS.primary : "rgba(255,255,255,0.55)";
 
   return (
@@ -290,7 +329,17 @@ function TabItem({ index, label, isFocused, onPress, onLongPress, tabWidth }: Ta
           ],
         }}
       >
-        <IconComponent color={color} size={22} filled={isFocused} />
+        <View>
+          <IconComponent color={color} size={22} filled={isFocused} />
+          {/* Unread badge dot */}
+          {(badgeCount ?? 0) > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {(badgeCount ?? 0) > 9 ? "9+" : String(badgeCount)}
+              </Text>
+            </View>
+          )}
+        </View>
       </Animated.View>
       <Animated.Text
         style={[
@@ -312,6 +361,7 @@ export default function LiquidGlassTabBar({
 }: BottomTabBarProps) {
   const tabCount = state.routes.length;
   const tabWidth = TAB_BAR_WIDTH / tabCount;
+  const unreadCount = useTripMonitorStore(selectUnreadCount);
 
   // Animated pill position
   const pillAnim = useRef(new Animated.Value(state.index * tabWidth)).current;
@@ -397,6 +447,7 @@ export default function LiquidGlassTabBar({
                 onPress={onPress}
                 onLongPress={onLongPress}
                 tabWidth={tabWidth}
+                badgeCount={route.name === "notifications" ? unreadCount : 0}
               />
             );
           })}
@@ -519,5 +570,25 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     letterSpacing: 0.3,
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.error,
+    borderWidth: 1.5,
+    borderColor: "rgba(15,23,42,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 2,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#fff",
+    lineHeight: 12,
   },
 });
