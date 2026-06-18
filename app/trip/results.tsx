@@ -8,6 +8,7 @@ import {
   Dimensions,
   FlatList,
   Alert,
+  ScrollView,
 } from "react-native";
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -24,9 +25,10 @@ import { useTripMonitorStore } from "@/store/trip-monitor.store";
 import { tripService } from "@/services/supabase.service";
 import type { Place, AIFilters } from "@/types";
 import PlaceCard from "@/components/place/PlaceCard";
+import CommunityInsightsCard from "@/components/place/CommunityInsightsCard";
 
 const { width, height } = Dimensions.get("window");
-const BOTTOM_SHEET_HEIGHT = height * 0.45;
+const BOTTOM_SHEET_HEIGHT = height * 0.55; // Increased slightly to fit insights
 
 type DiscoveryStep =
   | "idle"
@@ -279,30 +281,46 @@ export default function TripResultsScreen() {
             )}
           </View>
 
-          {/* Places list */}
-          {discoveredPlaces.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyText}>No places found matching your criteria</Text>
-              <Text style={styles.emptySubtext}>Try a broader prompt or increase detour distance</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={discoveredPlaces}
-              keyExtractor={(item) => item.googlePlaceId}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.placesList}
-              renderItem={({ item }) => (
-                <PlaceCard
-                  place={item}
-                  isSelected={selectedPlace?.googlePlaceId === item.googlePlaceId}
-                  onPress={() => handlePlaceSelect(item)}
-                  onDetailPress={() => handlePlaceDetail(item)}
+          {/* Places list and AI Insights */}
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            {discoveredPlaces.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>🔍</Text>
+                <Text style={styles.emptyText}>No places found matching your criteria</Text>
+                <Text style={styles.emptySubtext}>Try a broader prompt or increase detour distance</Text>
+              </View>
+            ) : (
+              <>
+                <FlatList
+                  data={discoveredPlaces}
+                  keyExtractor={(item) => item.googlePlaceId}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.placesList}
+                  renderItem={({ item }) => (
+                    <PlaceCard
+                      place={item}
+                      isSelected={selectedPlace?.googlePlaceId === item.googlePlaceId}
+                      onPress={() => handlePlaceSelect(item)}
+                      onDetailPress={() => handlePlaceDetail(item)}
+                    />
+                  )}
                 />
-              )}
-            />
-          )}
+                
+                <View style={{ paddingHorizontal: SPACING.base, paddingBottom: SPACING.xl }}>
+                  <Text style={{ fontSize: FONT_SIZE.md, fontWeight: "700", color: COLORS.textPrimary, marginBottom: SPACING.sm, marginTop: SPACING.sm }}>
+                    {selectedPlace ? `Insights for ${selectedPlace.name}` : `Top Recommendation: ${discoveredPlaces[0].name}`}
+                  </Text>
+                  <CommunityInsightsCard
+                    googlePlaceId={selectedPlace ? selectedPlace.googlePlaceId : discoveredPlaces[0].googlePlaceId}
+                    placeName={selectedPlace ? selectedPlace.name : discoveredPlaces[0].name}
+                    placeRating={selectedPlace ? selectedPlace.rating : discoveredPlaces[0].rating}
+                    query={prompt}
+                  />
+                </View>
+              </>
+            )}
+          </ScrollView>
         </View>
       )}
     </View>

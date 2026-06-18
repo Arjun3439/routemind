@@ -506,3 +506,44 @@ export interface FeedScoreWeights {
 export interface ScoredPost extends Post {
   feedScore: number;
 }
+
+// ============================================================
+// Phase 8 — Community Intelligence Types
+// ============================================================
+
+export interface CommunityReview {
+  id: string;
+  placeId: string;
+  googleReviewId: string;
+  authorName: string;
+  rating: number;
+  reviewText: string;
+  source: string;
+  similarity?: number; // populated by semantic search
+  createdAt: string;
+}
+
+export interface CommunityInsight {
+  place: Place;
+  summary: string[];        // RAG-generated bullet points
+  reviews: CommunityReview[]; // top matching reviews
+  query?: string;
+  generatedAt: string;
+}
+
+export interface SemanticSearchResult {
+  id: string;
+  placeId: string;
+  reviewText: string;
+  authorName: string;
+  rating: number;
+  similarity: number;
+}
+
+export interface ReviewSyncResult {
+  placeId: string;
+  reviewsAdded: number;
+  reviewsSkipped: number;
+  embeddingsGenerated: number;
+}
+

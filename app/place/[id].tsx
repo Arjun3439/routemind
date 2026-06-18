@@ -24,6 +24,7 @@ import type { Tip } from "@/types";
 import { openMapsNavigation } from "@/utils/openMapsNavigation";
 import ReviewSummarySection from "@/components/place/ReviewSummarySection";
 import { geminiService } from "@/services/gemini.service";
+import CommunityInsightsCard from "@/components/place/CommunityInsightsCard";
 
 const { width } = Dimensions.get("window");
 
@@ -40,7 +41,9 @@ export default function PlaceDetailScreen() {
   const [tipText, setTipText] = useState("");
   const [isSaved, setIsSaved] = useState(place?.isSaved || false);
   const [isVisited, setIsVisited] = useState(place?.isVisited || false);
-  const [activeTab, setActiveTab] = useState<"feed"|"live"|"ai"|"gems"|"top">("feed");
+  const [activeTab, setActiveTab] = useState<"ai"|"feed"|"live"|"gems"|"top">("ai");
+  const [insightQuery, setInsightQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch tips from Supabase
   const { data: tips = [], isLoading: tipsLoading } = useQuery({
@@ -249,7 +252,7 @@ export default function PlaceDetailScreen() {
 
           {/* V3 Sub-Tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subTabsContainer}>
-            {(["feed", "live", "ai", "gems", "top"] as const).map((tab) => (
+            {(["ai", "feed", "live", "gems", "top"] as const).map((tab) => (
               <TouchableOpacity
                 key={tab}
                 style={[styles.subTab, activeTab === tab && styles.subTabActive]}
@@ -374,6 +377,31 @@ export default function PlaceDetailScreen() {
                   <Text style={styles.placeholderText}>Not enough community data to generate summary.</Text>
                 </View>
               )}
+
+              <View style={styles.aiSearchContainer}>
+                <TextInput
+                  style={styles.aiSearchInput}
+                  placeholder="Ask about this place (e.g. spicy food?)"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={insightQuery}
+                  onChangeText={setInsightQuery}
+                  onSubmitEditing={() => setSearchQuery(insightQuery)}
+                  returnKeyType="search"
+                />
+                <TouchableOpacity
+                  style={styles.aiSearchBtn}
+                  onPress={() => setSearchQuery(insightQuery)}
+                >
+                  <Text style={styles.aiSearchBtnText}>Search</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <CommunityInsightsCard
+                googlePlaceId={id!}
+                placeName={place.name}
+                placeRating={place.rating}
+                query={searchQuery}
+              />
             </View>
           )}
 
@@ -726,5 +754,35 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: FONT_SIZE.base,
     marginBottom: SPACING.md,
+  },
+  aiSearchContainer: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+    marginTop: SPACING.xl,
+  },
+  aiSearchInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    color: COLORS.textPrimary,
+    fontSize: FONT_SIZE.sm,
+  },
+  aiSearchBtn: {
+    height: 44,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  aiSearchBtnText: {
+    color: "#fff",
+    fontSize: FONT_SIZE.sm,
+    fontWeight: "600",
   },
 });
