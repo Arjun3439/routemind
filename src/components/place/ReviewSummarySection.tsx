@@ -2,7 +2,7 @@
 // RouteMind — ReviewSummarySection Component
 // ============================================================
 // Self-contained component that fetches (or serves cached)
-// Gemini-generated review bullet points for a place, with a
+// Groq-generated review bullet points for a place, with a
 // shimmer loading state and silent hide on empty/error.
 // ============================================================
 

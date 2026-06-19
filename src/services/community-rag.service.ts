@@ -2,8 +2,35 @@ import axios from "axios";
 import { supabase } from "./supabase.client";
 import type { Place, SemanticSearchResult } from "@/types";
 
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY!;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GROQ_API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY!;
+const GROQ_MODEL = process.env.EXPO_PUBLIC_GROQ_MODEL || "llama-3.3-70b-versatile";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+async function groqChat(
+  prompt: string,
+  opts: { temperature?: number; maxTokens?: number; timeout?: number } = {}
+): Promise<string> {
+  const { temperature = 0.3, maxTokens = 512, timeout = 15000 } = opts;
+  const response = await axios.post(
+    GROQ_URL,
+    {
+      model: GROQ_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature,
+      max_tokens: maxTokens,
+    },
+    {
+      timeout,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+    }
+  );
+  const text: string | undefined = response.data?.choices?.[0]?.message?.content;
+  if (!text) throw new Error("No response from Groq");
+  return text;
+}
 
 export const communityRagService = {
   /**
@@ -48,27 +75,15 @@ Rules:
 
 Return ONLY the bullet point sentences separated by newlines. No intro, no outro, no markdown formatting.`;
 
-      // 3. Call Gemini
-      const response = await axios.post(
-        GEMINI_URL,
-        {
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2, // Low temperature for factual summarization
-            maxOutputTokens: 300,
-            topP: 0.9,
-          },
-        },
-        {
-          timeout: 15000,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      // 3. Call Groq
+      const rawText = await groqChat(prompt, {
+        temperature: 0.2,
+        maxTokens: 300,
+        timeout: 15000,
+      });
 
-      const rawText: string | undefined = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      
       if (!rawText) {
-        throw new Error("No response from Gemini RAG");
+        throw new Error("No response from Groq RAG");
       }
 
       // 4. Parse the response into an array of clean strings

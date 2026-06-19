@@ -1,15 +1,18 @@
 import axios from "axios";
 import { supabase } from "./supabase.client";
 
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY!;
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_API_KEY}`;
+// HF Inference API — all-mpnet-base-v2 produces 768-dim vectors (same as Gemini text-embedding-004)
+const HF_API_KEY = process.env.EXPO_PUBLIC_HF_API_KEY || "";
+const HF_EMBED_URL =
+  "https://api-inference.huggingface.co/models/sentence-transformers/all-mpnet-base-v2";
 
 // In-memory cache to avoid duplicate API calls for identical text
 const embeddingCache = new Map<string, number[]>();
 
 export const embeddingService = {
   /**
-   * Generates a 768-dimensional embedding using Gemini text-embedding-004
+   * Generates a 768-dimensional embedding using Hugging Face
+   * sentence-transformers/all-mpnet-base-v2 (schema-compatible with Gemini text-embedding-004)
    */
   async generateEmbedding(text: string): Promise<number[]> {
     if (!text || !text.trim()) {
@@ -23,31 +26,27 @@ export const embeddingService = {
       return embeddingCache.get(cleanText)!;
     }
 
-    if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("your_gemini")) {
-      console.warn("EXPO_PUBLIC_GEMINI_API_KEY is missing. Returning zero vector fallback.");
-      return new Array(768).fill(0);
-    }
-
     try {
       const response = await axios.post(
-        GEMINI_API_URL,
-        {
-          model: "models/text-embedding-004",
-          content: {
-            parts: [{ text: cleanText }]
-          }
-        },
+        HF_EMBED_URL,
+        { inputs: cleanText },
         {
           headers: {
             "Content-Type": "application/json",
+            // API key is optional — anonymous access is rate-limited but works
+            ...(HF_API_KEY ? { Authorization: `Bearer ${HF_API_KEY}` } : {}),
           },
-          timeout: 15000,
+          // HF cold-starts can take up to 20s on free tier
+          timeout: 30000,
         }
       );
 
-      const embedding = response.data?.embedding?.values;
+      // HF returns [[...768 values...]] for a single-input batch
+      const raw = response.data;
+      const embedding: number[] = Array.isArray(raw[0]) ? raw[0] : raw;
+
       if (!embedding || !Array.isArray(embedding)) {
-        throw new Error("Invalid response from Gemini embedding API");
+        throw new Error("Invalid response from Hugging Face embedding API");
       }
 
       // Cache the result

@@ -1,8 +1,8 @@
 // ============================================================
 // RouteMind — Places Service
 // ============================================================
-// Fetches Google Place reviews and manages the Supabase-backed
-// review_summary cache (7-day TTL).
+// Fetches Google Place reviews and manages the AsyncStorage-backed
+// review_summary cache (7-day TTL). Uses Groq for AI summaries.
 // ============================================================
 
 import axios from "axios";
@@ -58,17 +58,18 @@ export async function fetchPlaceReviews(
 // ─── Cache-aware summary fetcher ──────────────────────────────
 
 /**
- * Returns a cached Gemini review summary for the given placeId if one exists
+ * Returns a cached Groq review summary for the given placeId if one exists
  * and is less than 7 days old. Otherwise fetches fresh reviews, calls
- * summarizePlaceReviews, persists the result to Supabase, and returns it.
+ * summarizePlaceReviews (via Groq), persists the result to AsyncStorage,
+ * and returns it.
  *
  * Always returns string[] — empty array means "nothing to show" (UI hides the
  * section silently).
  *
- * @param googlePlaceId  The Google Place ID (used as the Supabase row lookup key)
+ * @param googlePlaceId  The Google Place ID (used as the AsyncStorage cache key)
  */
-// Simple sequential queue to prevent 429/503 from Gemini
-// Max 1 concurrent Gemini request at a time — they queue up behind each other
+// Simple sequential queue to prevent 429 rate limits from Groq
+// Max 1 concurrent request at a time — they queue up behind each other
 let activeRequests = 0;
 const MAX_CONCURRENT_REQUESTS = 1;
 const requestQueue: (() => void)[] = [];
@@ -118,12 +119,12 @@ export async function getOrGenerateReviewSummary(
       }
     }
 
-    // Wait in queue to avoid 429 rate limits from Gemini
+    // Wait in queue to avoid rate limits from Groq
     await enqueueRequest();
 
     let bullets: string[] = [];
     try {
-      // 2. Cache miss or stale — fetch reviews + call Gemini
+      // 2. Cache miss or stale — fetch Google reviews + call Groq
       const reviews = await fetchPlaceReviews(googlePlaceId);
       if (reviews.length > 0) {
         bullets = await summarizePlaceReviews(googlePlaceId, reviews);

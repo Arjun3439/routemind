@@ -26,6 +26,7 @@ import { tripService } from "@/services/supabase.service";
 import type { Place, AIFilters } from "@/types";
 import PlaceCard from "@/components/place/PlaceCard";
 import CommunityInsightsCard from "@/components/place/CommunityInsightsCard";
+import ReviewSummarySection from "@/components/place/ReviewSummarySection";
 
 const { width, height } = Dimensions.get("window");
 const BOTTOM_SHEET_HEIGHT = height * 0.55; // Increased slightly to fit insights
@@ -306,7 +307,24 @@ export default function TripResultsScreen() {
                     />
                   )}
                 />
-                
+
+                {/* AI Review Summary for selected / top place */}
+                <View style={styles.reviewSummaryWrapper}>
+                  <View style={styles.reviewSummaryHeader}>
+                    <Text style={styles.reviewSummaryTitle}>
+                      {selectedPlace ? `📝 Reviews: ${selectedPlace.name}` : `📝 Reviews: ${discoveredPlaces[0].name}`}
+                    </Text>
+                  </View>
+                  <ReviewSummarySection
+                    placeId={
+                      selectedPlace
+                        ? selectedPlace.googlePlaceId
+                        : discoveredPlaces[0].googlePlaceId
+                    }
+                    maxBullets={4}
+                  />
+                </View>
+
                 <View style={{ paddingHorizontal: SPACING.base, paddingBottom: SPACING.xl }}>
                   <Text style={{ fontSize: FONT_SIZE.md, fontWeight: "700", color: COLORS.textPrimary, marginBottom: SPACING.sm, marginTop: SPACING.sm }}>
                     {selectedPlace ? `Insights for ${selectedPlace.name}` : `Top Recommendation: ${discoveredPlaces[0].name}`}
@@ -458,6 +476,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   placesList: { paddingHorizontal: SPACING.base, paddingBottom: SPACING.xl, gap: SPACING.md },
+
+  // Review Summary (in results bottom sheet)
+  reviewSummaryWrapper: {
+    paddingHorizontal: SPACING.base,
+    paddingBottom: SPACING.md,
+  },
+  reviewSummaryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: SPACING.xs,
+    marginTop: SPACING.sm,
+  },
+  reviewSummaryTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
 
   // Markers
   markerContainer: {

@@ -3,95 +3,105 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } fr
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from "@/constants";
+import AIAssistant from "@/components/AIAssistant";
 
 export default function HomeTab() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>RouteMind</Text>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="notifications-outline" size={24} color={COLORS.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/search")}>
-              <Ionicons name="search-outline" size={24} color={COLORS.textPrimary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* AI Daily Tip */}
-        <View style={styles.aiTipContainer}>
-          <View style={styles.aiTipHeader}>
-            <Ionicons name="sparkles" size={18} color={COLORS.primary} />
-            <Text style={styles.aiTipTitle}>Daily Intelligence</Text>
-          </View>
-          <Text style={styles.aiTipText}>
-            Traffic is unusually light on the Coastal Highway this morning. Perfect time for a scenic drive!
-          </Text>
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/route")}>
-            <View style={[styles.actionIcon, { backgroundColor: `${COLORS.primary}20` }]}>
-              <Ionicons name="map" size={24} color={COLORS.primary} />
+    <View style={styles.root}>
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>RouteMind</Text>
+            <View style={styles.headerIcons}>
+              <TouchableOpacity style={styles.iconButton}>
+                <Ionicons name="notifications-outline" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/search")}>
+                <Ionicons name="search-outline" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.actionLabel}>Plan Route</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/community")}>
-            <View style={[styles.actionIcon, { backgroundColor: `${COLORS.secondary}20` }]}>
-              <Ionicons name="people" size={24} color={COLORS.secondary} />
-            </View>
-            <Text style={styles.actionLabel}>Community</Text>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/post/create?type=hidden_gem_nomination")}>
-            <View style={[styles.actionIcon, { backgroundColor: `${COLORS.success}20` }]}>
-              <Ionicons name="diamond" size={24} color={COLORS.success} />
+          {/* AI Daily Tip */}
+          <View style={styles.aiTipContainer}>
+            <View style={styles.aiTipHeader}>
+              <Ionicons name="sparkles" size={18} color={COLORS.primary} />
+              <Text style={styles.aiTipTitle}>Daily Intelligence</Text>
             </View>
-            <Text style={styles.actionLabel}>Nominate</Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={styles.aiTipText}>
+              Traffic is unusually light on the Coastal Highway this morning. Perfect time for a scenic drive!
+            </Text>
+          </View>
 
-        {/* Trending Routes */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Routes</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
+          {/* Quick Actions */}
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/route")}>
+              <View style={[styles.actionIcon, { backgroundColor: `${COLORS.primary}20` }]}>
+                <Ionicons name="map" size={24} color={COLORS.primary} />
+              </View>
+              <Text style={styles.actionLabel}>Plan Route</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/community")}>
+              <View style={[styles.actionIcon, { backgroundColor: `${COLORS.secondary}20` }]}>
+                <Ionicons name="people" size={24} color={COLORS.secondary} />
+              </View>
+              <Text style={styles.actionLabel}>Community</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/post/create?type=hidden_gem_nomination")}>
+              <View style={[styles.actionIcon, { backgroundColor: `${COLORS.success}20` }]}>
+                <Ionicons name="diamond" size={24} color={COLORS.success} />
+              </View>
+              <Text style={styles.actionLabel}>Nominate</Text>
             </TouchableOpacity>
           </View>
-          {/* Placeholder for RouteCarousel component */}
-          <View style={styles.placeholderCard}>
-            <Text style={styles.placeholderText}>Route cards will appear here</Text>
-          </View>
-        </View>
 
-        {/* Hidden Gems Nearby */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Hidden Gems Nearby</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
+          {/* Trending Routes */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Trending Routes</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAll}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Placeholder for RouteCarousel component */}
+            <View style={styles.placeholderCard}>
+              <Text style={styles.placeholderText}>Route cards will appear here</Text>
+            </View>
           </View>
-          {/* Placeholder for PlaceCarousel component */}
-          <View style={styles.placeholderCard}>
-            <Text style={styles.placeholderText}>Place cards will appear here</Text>
-          </View>
-        </View>
 
-      </ScrollView>
-    </SafeAreaView>
+          {/* Hidden Gems Nearby */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Hidden Gems Nearby</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAll}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Placeholder for PlaceCarousel component */}
+            <View style={styles.placeholderCard}>
+              <Text style={styles.placeholderText}>Place cards will appear here</Text>
+            </View>
+          </View>
+
+        </ScrollView>
+      </SafeAreaView>
+
+      {/* AI Assistant FAB — floats above everything */}
+      <AIAssistant />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

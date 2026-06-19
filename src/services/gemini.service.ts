@@ -2,8 +2,36 @@ import axios from "axios";
 import type { AIFilters, PlaceCategory, PlaceAISummary, RouteAISummary, TravelStorySummary } from "@/types";
 import { supabase } from "./supabase.client";
 
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY!;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GROQ_API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY!;
+const GROQ_MODEL = process.env.EXPO_PUBLIC_GROQ_MODEL || "llama-3.3-70b-versatile";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+/** Shared helper — sends a single user message to Groq and returns the text reply */
+async function groqChat(
+  prompt: string,
+  opts: { temperature?: number; maxTokens?: number; timeout?: number } = {}
+): Promise<string> {
+  const { temperature = 0.3, maxTokens = 1024, timeout = 30000 } = opts;
+  const response = await axios.post(
+    GROQ_URL,
+    {
+      model: GROQ_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature,
+      max_tokens: maxTokens,
+    },
+    {
+      timeout,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+    }
+  );
+  const text: string | undefined = response.data?.choices?.[0]?.message?.content;
+  if (!text) throw new Error("No response from Groq");
+  return text;
+}
 
 const PROMPT_TEMPLATE = (userPrompt: string) => `
 You are a smart travel filter engine for a route discovery app.
@@ -41,48 +69,19 @@ Respond ONLY with the JSON, no markdown fences, no explanation.
 
 export const geminiService = {
   async parsePrompt(userPrompt: string): Promise<AIFilters> {
-    // Retry up to 3 times with exponential backoff on 503/network errors
+    // Retry up to 3 times with exponential backoff on rate-limit / network errors
     let lastError: any;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         if (attempt > 0) {
-          // Wait 2s, then 4s before each retry
           await new Promise((res) => setTimeout(res, attempt * 2000));
         }
-        const response = await axios.post(
-          GEMINI_URL,
-          {
-            contents: [
-              {
-                parts: [{ text: PROMPT_TEMPLATE(userPrompt) }],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.3,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 1024,
-            },
-            safetySettings: [
-              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-            ],
-          },
-          {
-            timeout: 30000,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+        const rawText = await groqChat(PROMPT_TEMPLATE(userPrompt), {
+          temperature: 0.3,
+          maxTokens: 1024,
+          timeout: 30000,
+        });
 
-        const candidate = response.data?.candidates?.[0];
-        if (candidate?.finishReason === "MAX_TOKENS") {
-          throw new Error("Gemini response was truncated (MAX_TOKENS)");
-        }
-
-        const rawText = candidate?.content?.parts?.[0]?.text;
-        if (!rawText) throw new Error("No response from Gemini");
-
-        // Clean up and parse JSON
         const cleaned = rawText
           .replace(/```json\n?/g, "")
           .replace(/```\n?/g, "")
@@ -99,9 +98,11 @@ export const geminiService = {
     }
 
     // All retries failed — use smart keyword-based defaults so app still works
-    console.warn("Gemini API unavailable, using default filters:", lastError?.message);
+    console.warn("Groq API unavailable, using default filters:", lastError?.message);
     return getDefaultFilters(userPrompt);
   },
+
+
 
   async generatePlaceInsight(placeName: string, category: string, prompt: string): Promise<string> {
     try {
@@ -112,21 +113,13 @@ Write ONE short, enthusiastic 1-sentence tip about why this place is worth stopp
 Be specific and conversational. Max 20 words.
 Respond with ONLY the tip, no quotes, no labels.
 `;
-
-      const response = await axios.post(
-        GEMINI_URL,
-        {
-          contents: [{ parts: [{ text: insightPrompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 100 },
-        },
-        { timeout: 15000 }
-      );
-
-      return response.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+      return (await groqChat(insightPrompt, { temperature: 0.7, maxTokens: 100, timeout: 15000 })).trim();
     } catch {
       return "";
     }
   },
+
+
 
   // Export standalone V3 AI functions through geminiService object
   generatePlaceAISummary,
@@ -212,16 +205,7 @@ Return ONLY a valid JSON object with exactly these fields (keep strings brief):
 }
 `;
 
-    const response = await axios.post(
-      GEMINI_URL,
-      {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 500 },
-      },
-      { timeout: 15000, headers: { "Content-Type": "application/json" } }
-    );
-
-    const rawText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const rawText = await groqChat(prompt, { temperature: 0.3, maxTokens: 500, timeout: 15000 });
     if (!rawText) return null;
 
     const cleaned = rawText.replace(/\`\`\`json\\n?/g, "").replace(/\`\`\`\\n?/g, "").trim();
@@ -274,16 +258,7 @@ Return ONLY a valid JSON object with exactly this structure:
 }
 `;
 
-    const response = await axios.post(
-      GEMINI_URL,
-      {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 800 },
-      },
-      { timeout: 15000, headers: { "Content-Type": "application/json" } }
-    );
-
-    const rawText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const rawText = await groqChat(prompt, { temperature: 0.3, maxTokens: 800, timeout: 15000 });
     if (!rawText) return null;
 
     const cleaned = rawText.replace(/\`\`\`json\\n?/g, "").replace(/\`\`\`\\n?/g, "").trim();
@@ -339,7 +314,7 @@ export async function generateTravelStory(tripId: string): Promise<TravelStorySu
 }
 
 // ============================================================
-// NEW — Gemini Review Summary (additive, do not edit above)
+// Groq Review Summary
 // ============================================================
 
 /**
@@ -355,7 +330,7 @@ export interface GoogleReview {
 }
 
 /**
- * Given a placeId and its Google Place reviews, asks Gemini to produce a
+ * Given a placeId and its Google Place reviews, asks Groq to produce a
  * concise 3-5 bullet summary covering:
  *   - what people commonly praise
  *   - common complaints (if any)
@@ -363,11 +338,7 @@ export interface GoogleReview {
  *   - any standout practical tips
  *
  * Returns a plain string[] (one sentence per bullet, no markdown).
- * Returns [] on any error or if reviews is empty — callers should
- * silently hide the section in that case.
- *
- * Intentionally lightweight: low temperature, small token budget,
- * short timeout — safe to call per place in a result list.
+ * Returns [] on any error or if reviews is empty.
  */
 export async function summarizePlaceReviews(
   placeId: string,
@@ -398,24 +369,11 @@ Rules:
 - Do NOT use markdown or bullet characters (no asterisks, no dashes) — just output plain sentences, one per line.
 - No explanation, no intro, no extra text.`;
 
-      const response = await axios.post(
-        GEMINI_URL,
-        {
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 300,
-            topP: 0.9,
-          },
-        },
-        {
-          timeout: 15000, // Increased to 15s
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      const rawText: string | undefined =
-        response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const rawText = await groqChat(prompt, {
+        temperature: 0.2,
+        maxTokens: 300,
+        timeout: 15000,
+      });
       if (!rawText) return [];
 
       // Parse by splitting on newlines and cleaning up any accidental bullet chars
