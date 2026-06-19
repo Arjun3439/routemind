@@ -1,200 +1,232 @@
-import React from "react";
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from "react-native";
+import React, { useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+  Animated,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from "@/constants";
 
+// ─── Section Components ───────────────────────────────────────
+import TrendingRoutesSection    from "@/components/explore/TrendingRoutesSection";
+import TrendingPlacesSection    from "@/components/explore/TrendingPlacesSection";
+import TopRatedRoutesSection    from "@/components/explore/TopRatedRoutesSection";
+import TrendingTravelersSection from "@/components/explore/TrendingTravelersSection";
+import HiddenGemsSection        from "@/components/explore/HiddenGemsSection";
+import PopularListsSection      from "@/components/explore/PopularListsSection";
+import CommunityFavoritesSection from "@/components/explore/CommunityFavoritesSection";
+import NewDiscoveriesSection    from "@/components/explore/NewDiscoveriesSection";
+import LeaderboardSection       from "@/components/explore/LeaderboardSection";
+
+// ─── Category filter tabs (decorative — for future filtering) ─
+
+const CATEGORIES = [
+  { label: "All",         emoji: "✨" },
+  { label: "Routes",      emoji: "🛣️" },
+  { label: "Food",        emoji: "🍜" },
+  { label: "Hidden Gems", emoji: "💎" },
+  { label: "Photography", emoji: "📸" },
+  { label: "Coffee",      emoji: "☕" },
+  { label: "Nature",      emoji: "🌿" },
+];
+
 export default function ExploreTab() {
   const router = useRouter();
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Parallax header opacity
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Explore</Text>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/search")}>
-            <Ionicons name="search-outline" size={24} color={COLORS.textPrimary} />
-          </TouchableOpacity>
+      {/* ── Sticky top bar ── */}
+      <View style={styles.topBar}>
+        <View>
+          <Text style={styles.topBarTitle}>Explore</Text>
+          <Animated.Text style={[styles.topBarSub, { opacity: headerOpacity }]}>
+            Discover South India & Sri Lanka
+          </Animated.Text>
         </View>
-
-        {/* Top Categories */}
-        <View style={styles.section}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
-            {["Hidden Gems", "Scenic Routes", "Foodie Favorites", "Camping", "Off-Road"].map(cat => (
-              <TouchableOpacity key={cat} style={styles.categoryBadge}>
-                <Text style={styles.categoryText}>{cat}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Leaderboards Entry */}
-        <TouchableOpacity style={styles.leaderboardCard} onPress={() => router.push("/leaderboard")}>
-          <View style={styles.leaderboardLeft}>
-            <Text style={styles.leaderboardEmoji}>🏆</Text>
-            <View>
-              <Text style={styles.leaderboardTitle}>Community Leaderboards</Text>
-              <Text style={styles.leaderboardSub}>See top contributors and rank up!</Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color={COLORS.textSecondary} />
+        <TouchableOpacity
+          style={styles.searchBtn}
+          onPress={() => router.push("/search")}
+        >
+          <Ionicons name="search-outline" size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
+      </View>
 
-        {/* Trending Travel Lists */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Lists</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-            {[1, 2, 3].map(i => (
-              <View key={i} style={styles.placeholderCard}>
-                <Ionicons name="list" size={32} color={COLORS.primary} />
-                <Text style={styles.placeholderText}>List {i}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Top Rated Routes */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Top Rated Routes</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-            {[1, 2, 3].map(i => (
-              <View key={i} style={[styles.placeholderCard, { width: 200, height: 120 }]}>
-                <Ionicons name="map" size={32} color={COLORS.success} />
-                <Text style={styles.placeholderText}>Route {i}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
+      {/* ── Category filter row ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoryRow}
+        style={styles.categoryScroll}
+      >
+        {CATEGORIES.map((cat, idx) => (
+          <TouchableOpacity
+            key={cat.label}
+            style={[
+              styles.categoryChip,
+              idx === 0 && styles.categoryChipActive,
+            ]}
+          >
+            <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+            <Text
+              style={[
+                styles.categoryText,
+                idx === 0 && styles.categoryTextActive,
+              ]}
+            >
+              {cat.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
+
+      {/* ── Main scroll content ── */}
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
+        {/* 
+          Each section is fully independent.
+          One failing will never crash or block the others.
+          Sections render in priority order per spec.
+        */}
+
+        {/* 1. Trending Routes */}
+        <TrendingRoutesSection />
+
+        {/* 2. Trending Places */}
+        <TrendingPlacesSection />
+
+        {/* 3. Top Rated Routes */}
+        <TopRatedRoutesSection />
+
+        {/* 4. Trending Travelers */}
+        <TrendingTravelersSection />
+
+        {/* 5. Hidden Gems */}
+        <HiddenGemsSection />
+
+        {/* 6. Popular Lists */}
+        <PopularListsSection />
+
+        {/* 7. Community Favorites */}
+        <CommunityFavoritesSection />
+
+        {/* 8. New Discoveries */}
+        <NewDiscoveriesSection />
+
+        {/* 9. Leaderboard (embedded) */}
+        <View style={styles.leaderboardWrapper}>
+          <LeaderboardSection />
+        </View>
+
+        {/* Bottom padding for tab bar */}
+        <View style={styles.bottomSpacer} />
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  header: {
+
+  // Sticky header
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
     backgroundColor: COLORS.background,
   },
-  headerTitle: {
-    fontSize: 28,
+  topBarTitle: {
+    fontSize: FONT_SIZE["3xl"],
     fontWeight: "800",
     color: COLORS.textPrimary,
+    letterSpacing: -0.5,
   },
-  iconButton: {
-    padding: 8,
+  topBarSub: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 1,
+  },
+  searchBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+
+  // Category filter
+  categoryScroll: {
+    flexGrow: 0,
+    backgroundColor: COLORS.background,
+  },
+  categoryRow: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.full,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  section: {
-    marginBottom: SPACING.xl,
+  categoryChipActive: {
+    backgroundColor: `${COLORS.primary}20`,
+    borderColor: COLORS.primary,
   },
-  categoriesRow: {
-    paddingHorizontal: SPACING.md,
-    gap: SPACING.sm,
-  },
-  categoryBadge: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+  categoryEmoji: { fontSize: 13 },
   categoryText: {
-    color: COLORS.textPrimary,
+    color: COLORS.textSecondary,
     fontWeight: "600",
     fontSize: FONT_SIZE.sm,
   },
-  leaderboardCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.xl,
-    padding: SPACING.md,
-    backgroundColor: `${COLORS.primary}15`,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: `${COLORS.primary}30`,
-  },
-  leaderboardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  leaderboardEmoji: {
-    fontSize: 32,
-  },
-  leaderboardTitle: {
-    fontSize: FONT_SIZE.base,
-    fontWeight: "700",
+  categoryTextActive: {
     color: COLORS.primary,
   },
-  leaderboardSub: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+
+  // Scroll content
+  scrollContent: {
+    paddingTop: SPACING.sm,
   },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
+  leaderboardWrapper: {
+    // LeaderboardSection has its own horizontal margin
   },
-  sectionTitle: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-  },
-  seeAllText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
-  horizontalList: {
-    paddingHorizontal: SPACING.md,
-    gap: SPACING.md,
-  },
-  placeholderCard: {
-    width: 140,
-    height: 140,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-  placeholderText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.sm,
-    fontWeight: "600",
+  bottomSpacer: {
+    height: 100,
   },
 });
